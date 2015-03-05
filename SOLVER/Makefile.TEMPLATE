@@ -15,7 +15,7 @@ SRCS =	background_models.F90 commpi.F90 commun.F90 get_model.F90 \
 	pointwise_derivatives.f90 rotations.f90 seismograms.f90 source.f90 \
 	stiffness_di.f90 stiffness_fluid.f90 stiffness_mono.f90 \
 	stiffness_quad.f90 subpar_mapping.f90 unrolled_loops.f90 utlity.f90 \
-	wavefields_io.f90 ftz.c pthread.c
+	coupling_mod.f90 wavefields_io.f90 ftz.c pthread.c
 
 OBJS =	background_models.o commpi.o commun.o get_model.o \
 	lateral_heterogeneities.o meshes_io.o nc_helpers.o nc_routines.o \
@@ -28,7 +28,7 @@ OBJS =	background_models.o commpi.o commun.o get_model.o \
 	interpolation.o kdtree2.o list.o main.o pointwise_derivatives.o \
 	rotations.o seismograms.o source.o stiffness_di.o stiffness_fluid.o \
 	stiffness_mono.o stiffness_quad.o subpar_mapping.o unrolled_loops.o \
-	utlity.o wavefields_io.o ftz.o pthread.o
+	utlity.o coupling_mod.o wavefields_io.o ftz.o pthread.o
 
 ifeq ($(strip $(USE_NETCDF)),true)
    FFLAGS += -Denable_netcdf
@@ -114,7 +114,7 @@ def_grid.o: analytic_mapping.o apply_masks.o commun.o data_comm.o data_io.o \
 def_precomp_terms.o: analytic_mapping.o attenuation.o background_models.o \
 	commun.o data_io.o data_matr.o data_mesh.o data_pointwise.o \
 	data_proc.o data_source.o data_spec.o def_grid.o get_mesh.o \
-	get_model.o global_parameters.o pointwise_derivatives.o utlity.o Makefile ../make_axisem.macros 
+	get_model.o global_parameters.o pointwise_derivatives.o utlity.o coupling_mod.o Makefile ../make_axisem.macros 
 get_mesh.o: background_models.o commun.o data_comm.o data_io.o data_mesh.o \
 	data_proc.o data_time.o global_parameters.o Makefile ../make_axisem.macros 
 global_parameters.o:  Makefile ../make_axisem.macros 
@@ -145,7 +145,7 @@ unrolled_loops.o: data_mesh.o global_parameters.o Makefile ../make_axisem.macros
 utlity.o: analytic_mapping.o data_mesh.o data_spec.o global_parameters.o Makefile ../make_axisem.macros 
 wavefields_io.o: data_io.o data_mesh.o data_pointwise.o data_proc.o \
 	data_source.o global_parameters.o nc_routines.o nc_snapshots.o \
-	pointwise_derivatives.o Makefile ../make_axisem.macros 
+	pointwise_derivatives.o coupling_mod.o Makefile ../make_axisem.macros 
 background_models.o: data_proc.o global_parameters.o interpolation.o Makefile ../make_axisem.macros 
 commpi.o: clocks.o data_comm.o data_mesh.o data_proc.o data_time.o \
 	global_parameters.o list.o Makefile ../make_axisem.macros 
@@ -174,7 +174,9 @@ time_evol_wave.o: apply_masks.o attenuation.o clocks.o commun.o data_io.o \
 	data_time.o def_precomp_terms.o global_parameters.o meshes_io.o \
 	nc_routines.o parameters.o pointwise_derivatives.o rotations.o \
 	seismograms.o source.o stiffness_di.o stiffness_fluid.o \
-	stiffness_mono.o stiffness_quad.o wavefields_io.o Makefile ../make_axisem.macros 
+	stiffness_mono.o stiffness_quad.o wavefields_io.o coupling_mod.o Makefile ../make_axisem.macros 
 ftz.o:  Makefile ../make_axisem.macros 
 pthread.o:  Makefile ../make_axisem.macros 
 kdtree2.o:  Makefile ../make_axisem.macros
+coupling_mod.o: global_parameters.o utlity.o Makefile ../make_axisem.macros
+
