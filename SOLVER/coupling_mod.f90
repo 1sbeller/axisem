@@ -12,7 +12,7 @@ module coupling_mod
   use commun, only: barrier
   use data_mesh, only: npol, nelem, eltype, lnods, crd_nodes, npoin
   use data_mesh, only: ielsolid, ielfluid, nel_solid, nel_fluid
-  use geom_transf, only: jacobian
+  use analytic_mapping, only: jacobian                                  !!! SB Previously in geom_transf
   
   implicit none
   
@@ -22,6 +22,9 @@ module coupling_mod
 
 !==================================================
 ! MODULE SHARED VARIABLES
+
+  ! Flag for coupling (SB) Don't know where to put
+  logical :: coupling
 
   ! Number of unique boundary points, nb of boundary points
   integer :: npt_box_file,nb_elm_to_store
@@ -520,7 +523,7 @@ subroutine dump_field_1d_cp(f, filename, appisnap, n)
 
  subroutine  finalize_coupling 
    open(10,file='nb_rec_to_read.par')
-   write(10,*) istrain
+   write(10,*) nstrain
    close(10)
  end subroutine finalize_coupling
 
