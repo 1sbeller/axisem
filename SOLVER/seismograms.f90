@@ -275,7 +275,7 @@ subroutine prepare_seismograms
 
 11 format(6(1pe11.4))
 
-  if (dump_wavefields.and.(.not.use_netcdf)) then
+  if (dump_wavefields.and.(.not.use_netcdf).and.(.not.coupling)) then !! VM VM add coupling
     do iel=1,maxind
        call define_io_appendix(appielem,iel+mynum*maxind)
        open(unit=40000000+iel,file=datapath(1:lfdata)// &
@@ -923,8 +923,8 @@ subroutine compute_surfelem(disp, velo)
       end if !monopole
       call nc_dump_surface(dumpvar(:,:), 'velo')
 
-  else !use_netcdf
-      if (src_type(1)=='monopole') then
+  else !use_netcdf !! VM VM add coupling
+      if (src_type(1)=='monopole' .and. (.not. coupling)) then  !!! SB
       do i=1,maxind
          write(40000000+i,*)real(disp(npol/2,jsurfel(i),surfelem(i),1)),&
                             real(disp(npol/2,jsurfel(i),surfelem(i),3))

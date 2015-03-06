@@ -28,7 +28,7 @@ module def_precomp_terms
   use data_mesh
   use data_spec
   use data_source, only : src_type
-  use data_io,     only : verbose
+  use data_io,     only : verbose, coupling
   use data_proc
   
   use get_mesh,    only : compute_coordinates_mesh
@@ -52,7 +52,8 @@ subroutine read_model_compute_terms
   use commun,       only: barrier
   use data_matr,    only: Q_mu, Q_kappa, M_w_fl, M0_w_fl, M1chi_fl, M2chi_fl, M4chi_fl, &
                           bdry_matr
-  
+  use coupling_mod, only : lambda_cp,mu_cp,rho_cp   !! SB coupling
+
   
   real(kind=dp), dimension(:,:,:),allocatable :: rho, lambda, mu, massmat_kwts2
   real(kind=dp), dimension(:,:,:),allocatable :: xi_ani, phi_ani, eta_ani
@@ -70,6 +71,13 @@ subroutine read_model_compute_terms
   allocate(eta_ani(0:npol,0:npol,1:nelem))
   allocate(fa_ani_theta(0:npol,0:npol,1:nelem))
   allocate(fa_ani_phi(0:npol,0:npol,1:nelem))
+
+  !!! SB coupling
+  if (coupling) then
+     allocate(rho_cp(0:npol,0:npol,1:nelem)) 
+     allocate(lambda_cp(0:npol,0:npol,1:nelem),mu_cp(0:npol,0:npol,1:nelem))
+  end if
+  !!! SB
   
   if (anel_true) then
     allocate(Q_mu(1:nel_solid))
@@ -87,6 +95,14 @@ subroutine read_model_compute_terms
   else
     call read_model(rho, lambda, mu, xi_ani, phi_ani, eta_ani, fa_ani_theta, fa_ani_phi)
   endif
+
+  !!! SB 
+  if (coupling) then
+     rho_cp=rho
+     lambda_cp=lambda
+     mu_cp=mu
+  end if
+  !!! SB coupling
 
   if (lpr .and. verbose > 1) write(6,*) '   define mass matrix....'
   call def_mass_matrix_k(rho, lambda, mu, massmat_kwts2)

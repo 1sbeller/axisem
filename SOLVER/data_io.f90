@@ -77,6 +77,9 @@ module data_io
   character(len=80), dimension(:), allocatable :: fname_rec_seis
   character(len=80), dimension(:), allocatable :: fname_rec_velo
 
+  ! Flag for coupling (SB) Don't know where to put
+  logical :: coupling
+
 contains
 
 !-----------------------------------------------------------------------------------------

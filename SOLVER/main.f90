@@ -37,7 +37,11 @@ program axisem
   use meshes_io,             only : finish_xdmf_xml
   use data_io,               only : verbose, define_io_appendix
   use clocks_wrapper_solver, only : start_clock, end_clock
-  
+
+  !!!! Modifs SB
+  use coupling_mod
+  !!!! End modifs
+
   implicit none
 
   call set_ftz() ! ftz.c, set flush to zero
@@ -73,6 +77,14 @@ program axisem
      write(6,*) 'MAIN: Starting wave preparation...........................'
   call prepare_waves ! time_evol_wave
 
+
+!!!!  BEGIN TEST MODIFS COUPLING (SB)
+  if (coupling) then
+     call read_boundary_coordinates
+     call barrier
+  end if
+!!!!! END MODFIS
+
   ! Deallocate all the large arrays that are not needed in the time loop,
   ! specifically those from data_mesh_preloop and data_pointwise
   if (lpr .and. verbose >= 1) &
@@ -106,6 +118,13 @@ program axisem
   call end_clock ! clocks_wrapper_solver
 
   call pend ! commun
+
+!!!! SB coupling
+  if (coupling) then
+     if (lpr) call finalize_coupling 
+  end if
+!!!! SB  
+
 
   if (lpr)         write(6,*)  '=========PROGRAM axisem FINISHED============='
   if (verbose > 1) write(69,*) '=========PROGRAM axisem FINISHED============='

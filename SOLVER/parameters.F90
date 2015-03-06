@@ -87,7 +87,15 @@ subroutine readin_parameters
   ! now pre-set. Most of these are to be considered in the post processing stage now.
   sum_seis = .false.
   sum_fields = .false.
-   
+
+  !!! SB MUST BE READ SOMEWHERE
+  !dump_snaps_solflu = .false. !! old axisem
+  !dump_type = 'fullfields' !! VM VM
+  dump_type = 'coupling' !! VM VM  hardcoded this for test of coupling method
+  coupling = .true. !! VM VM  hardcoded too this for test of coupling method
+  !!! num_simul = 1 old axisem
+  !! SB coupling
+
   ! netcdf format
   output_format = 'binary'
   if (use_netcdf) output_format='netcdf'
@@ -729,6 +737,13 @@ subroutine check_basic_parameters
         'real kind here:', realkind, &
         '\nchange parameter realkind in global_parameters.f90'
   call pcheck((realkind /= sp .and. realkind /= dp), errmsg)
+
+!!!!!!!!!!!!!!!!!!!  OLD VERSION OF AXISEM SB 
+! errmsg = "!!!!!! NOT GOING ANY FURTHER !!!!!!\n" &
+!        // "  It's just too much to save 10 frames of strain & velocity\n" &
+!        // "  per source period! Choose something reasonable."
+!  call pcheck(strain_samp > 30, errmsg) !! VM VM change 15 to 30
+!!!!!!!!!!!!!!!!!!! OLD VERSION OF AXISEM
 
   errmsg = "Need indices for GLL points to dump xdmf. Set XDMF_GLL_* in inparam_advanced"
   call pcheck(dump_xdmf .and. (i_n_xdmf == -1 .or. j_n_xdmf == -1 ), errmsg)

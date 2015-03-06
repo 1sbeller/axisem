@@ -22,10 +22,6 @@ module coupling_mod
 
 !==================================================
 ! MODULE SHARED VARIABLES
-
-  ! Flag for coupling (SB) Don't know where to put
-  logical :: coupling
-
   ! Number of unique boundary points, nb of boundary points
   integer :: npt_box_file,nb_elm_to_store
   integer, dimension(:), allocatable :: is_in_box,id_elm_to_store,id_glob_to_store 
