@@ -89,10 +89,13 @@ subroutine readin_parameters
   sum_fields = .false.
 
   !!! SB MUST BE READ SOMEWHERE
+  if (dump_wavefields) then
+     if (dump_type == 'coupling' .or. dump_type == 'coupling_box') coupling = .true.
+  end if
   !dump_snaps_solflu = .false. !! old axisem
   !dump_type = 'fullfields' !! VM VM
-  dump_type = 'coupling' !! VM VM  hardcoded this for test of coupling method
-  coupling = .true. !! VM VM  hardcoded too this for test of coupling method
+!!!!!!!!!!! SB !!  dump_type = 'coupling' !! VM VM  hardcoded this for test of coupling method
+!!!!!!!!!!! SB !!  coupling = .true. !! VM VM  hardcoded too this for test of coupling method
   !!! num_simul = 1 old axisem
   !! SB coupling
 
@@ -226,7 +229,7 @@ subroutine readin_parameters
   need_fluid_displ = .false.
   if (dump_vtk .or. dump_xdmf .or. dump_energy .or. dump_wavefields .and. &
         (dump_type=='fullfields' .or. dump_type=='displ_only' &
-        .or. dump_type=='strain_only')) then
+        .or. dump_type=='strain_only' .or. dump_type=='coupling' .or. dump_type=='coupling_box'  )) then !!SB
      ! Need to add this for each new type of wavefield dumping method that 
      ! requires the fluid displacement/velocities
      need_fluid_displ = .true.
@@ -479,6 +482,8 @@ subroutine read_inparam_advanced
              if (trim(dump_type) /= 'fullfields' .and. &
                  trim(dump_type) /= 'displ_only' .and. &
                  trim(dump_type) /= 'strain_only' .and. &
+                 trim(dump_type) /= 'coupling' .and. &                  !! SB
+                 trim(dump_type) /= 'coupling_box' .and. &        !! SB
                  trim(dump_type) /= 'displ_velo') then
                    write(6,*) dump_type
                    stop 'ERROR: invalid value for KERNEL_DUMPTYPE!'

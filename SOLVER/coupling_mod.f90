@@ -38,6 +38,76 @@ module coupling_mod
 
 contains
 
+!===============================================================================
+! Init coupling
+  subroutine initialize_coupling
+
+    integer :: j
+
+    if (dump_wavefields) then
+
+       if (dump_type == 'coupling') then
+
+          ! Find elements base on min/max of colat and radius given by the user
+          rmin  = kwf_rmin * 1000.          ! to meters
+          rmax  = kwf_rmax * 1000.
+          thmin = kwf_thetamin * pi / 180.  ! to rad
+          thmax = kwf_thetamax * pi / 180.
+
+          allocate(rbox(4), thbox(4), phbox(4))
+
+          rbox(1)  = rmin
+          thbox(1) = thmin
+          rbox(2)  = rmin
+          thbox(2) = thmax
+          rbox(3)  = rmax
+          thbox(3) = thmin
+          rbox(4)  = rmax
+          thbox(4) = thmax
+          phbox(4) = 0.
+          
+
+          ! Must rotate these coordinates when source is not a the pole
+          if (rot_src) then
+             write(6,*) mynum, 'rotate since source is not beneath north pole'       
+           
+             do j=1,4
+                call rotate_box(rbox(j), thbox(j), phbox(j))
+             end do
+             
+             rmin  = minval(rbox)
+             rmax  = maxval(rbox)
+             thmin = minval(thbox)
+             thmax = maxval(thbox)
+             
+             ! Check min/max values again if rotation has been applied
+             write(6,*) mynum, 'r min/max after rotation:', rmin / 1000., rmax / 1000.
+             write(6,*) mynum, 'th min/max after rotation:', thmin / pi * 180., &
+                  thmax / pi * 180.
+          end if
+
+          allocate(szbox(2,1:4))
+          szbox(1,:) = rbox(:) * sin(thbox(:))
+          szbox(2,:) = rbox(:) * cos(thbox(:))
+
+          call find_boundary_elements
+
+          deallocate(rbox,thbox,szbox)
+
+       elseif (dump_type == 'coupling_box') then
+
+          ! Read ../input_box.txt and get min/max or colatitudes and radius
+          ! then find elements 
+          call read_boundary_coordinates
+          ! this is ok (last version of AxiSEM
+
+       end if
+
+    end if
+
+  end subroutine initialize_coupling
+!--------------------------------------------------------------------------------
+
 !================================================================================
 ! Read box's boundary coordinates (r,theta,phi) and sort them to only keep unique
 ! coordinates
@@ -47,11 +117,12 @@ contains
     character(len=100) :: boxpoints_file
     real, parameter :: delta_r=10000., delta_th=0.05
 
+
     boxpoints_file = '../input_box.txt'
 
     !--------------------------------------------------
     ! Read discrete box's boundary point file
-    open(unit=91, file=trim(boxpoints_file))
+    open(unit=91, file=trim(boxpoints_file), status='old')
     read(91,*) npt_box_file
 
     allocate(rbox(1:npt_box_file), thbox(1:npt_box_file), phbox(1:npt_box_file))
@@ -59,6 +130,8 @@ contains
     do j=1, npt_box_file
        read(91,*) rbox(j), thbox(j), phbox(j)
     end do
+
+    close(unit=91)
 
     rbox  = rbox * 1000.
     thbox = (90. - thbox) * pi / 180.      ! Read latitudes instead of colatitudes
@@ -118,7 +191,7 @@ contains
     ! TEMPORARY FIND THE ELEMENS HERE (SB)
     call find_boundary_elements
 
-    deallocate(rbox,thbox,szbox)
+    deallocate(rbox,thbox,szbox) !!!! Missing phbox...
 
   end subroutine read_boundary_coordinates
 !================================================================================
@@ -304,37 +377,12 @@ contains
   end subroutine find_boundary_elements
 !================================================================================
 
- 
-
 !================================================================================
-! Compute strain/stress/vel same as compute strain in time_evol.F90
-  subroutine compute_fields
-
-
-  end subroutine compute_fields
-!================================================================================
-
-
-
-!================================================================================
-  subroutine interpolate_fields
-
-  end subroutine interpolate_fields
-!================================================================================
-
-
-
-!================================================================================
-! Should use netCDF to save fields. We DO NOT save 3D simulations but only 2D
-!    => later, have to do post-processing (before or at the beginning of FDM/DGM) 
-  subroutine write_boundary_fields
-
-  end subroutine write_boundary_fields
-!================================================================================  
-
-
+! Write vtk
   subroutine writeWTKCell(filename,t,p,u,N,M,d)
+    
     implicit none
+    
     integer N,M,d
     real(kind=dp) p(N,d-1)
     real u(M)
@@ -397,7 +445,10 @@ contains
     close(49)
     
   end subroutine writeWTKCell
+!--------------------------------------------------------------------------------
 
+!================================================================================
+! Routine to ratotate the box
   subroutine rotate_box(r,th,ph)
 
     real(kind=dp)   ,intent(inout) :: r,th,ph
@@ -409,118 +460,118 @@ contains
     
     x_vec_rot = matmul(trans_rot_mat,x_vec)
     
-!    write(23,*) x_vec
-!    write(23,*) x_vec_rot
- 
     r_r = dsqrt(x_vec_rot(1)**2 + x_vec_rot(2)**2 + x_vec_rot(3)**2 )
     th = dacos((x_vec_rot(3)  + smallval_dble )/ ( r_r + smallval_dble) )
     ph = atan2(x_vec_rot(2),x_vec_rot(1))
 
   end subroutine rotate_box
+!--------------------------------------------------------------------------------
 
-!-----------------------------------------------------------------------------------------
-subroutine dump_field_1d_cp(f, filename, appisnap, n)
-
-   use data_source,                only : have_src, src_dump_type
-   use data_mesh,                  only : nel_solid, nel_fluid
-
-   integer, intent(in)                 :: n
-   real(kind=realkind),intent(in)      :: f(0:,0:,:)
-   character(len=16), intent(in)       :: filename
-   character(len=4), intent(in)        :: appisnap
-   integer i
-   !real(kind=realkind)                 :: floc(0:size(f,1)-1, 0:size(f,2)-1, 1:size(f,3))
-   
-   do i=1,nb_elm_to_store
-      buff_to_dump(:,:,i) = f(:,:,id_elm_to_store(i))
-      !write(*,*) id_elm_to_store(i),lambda_cp(1,1,id_glob_to_store(i)),mu_cp(1,1,id_glob_to_store(i))
-   end do
- 
-   !if (src_dump_type == 'mask' .and. n==nel_solid) &
-   !     call eradicate_src_elem_values(floc)
- 
-   !if (use_netcdf) then
-   !    if (n==nel_solid) then
-   !        call nc_dump_field_solid(pack(floc(ibeg:iend,ibeg:iend,:), .true.), &
-   !                                 filename(2:))
-   !    elseif (n==nel_fluid) then
-   !        call nc_dump_field_fluid(pack(floc(ibeg:iend,ibeg:iend,:), .true.), &
-   !                                 filename(2:))
-   !    else
-   !        write(6,*) 'Neither solid nor fluid. What''s wrong here?'
-   !        stop 2
-   !    end if
-   !else
+!================================================================================
+! Dumping routine
+  subroutine dump_field_1d_cp(f, filename, appisnap, n)
+    
+    use data_source,                only : have_src, src_dump_type
+    use data_mesh,                  only : nel_solid, nel_fluid
+    
+    integer, intent(in)                 :: n
+    real(kind=realkind),intent(in)      :: f(0:,0:,:)
+    character(len=16), intent(in)       :: filename
+    character(len=4), intent(in)        :: appisnap
+    integer i
+    !real(kind=realkind)                 :: floc(0:size(f,1)-1, 0:size(f,2)-1, 1:size(f,3))
+    
+    do i=1,nb_elm_to_store
+       buff_to_dump(:,:,i) = f(:,:,id_elm_to_store(i))
+       !write(*,*) id_elm_to_store(i),lambda_cp(1,1,id_glob_to_store(i)),mu_cp(1,1,id_glob_to_store(i))
+    end do
+    
+    !if (src_dump_type == 'mask' .and. n==nel_solid) &
+    !     call eradicate_src_elem_values(floc)
+    
+    !if (use_netcdf) then
+    !    if (n==nel_solid) then
+    !        call nc_dump_field_solid(pack(floc(ibeg:iend,ibeg:iend,:), .true.), &
+    !                                 filename(2:))
+    !    elseif (n==nel_fluid) then
+    !        call nc_dump_field_fluid(pack(floc(ibeg:iend,ibeg:iend,:), .true.), &
+    !                                 filename(2:))
+    !    else
+    !        write(6,*) 'Neither solid nor fluid. What''s wrong here?'
+    !        stop 2
+    !    end if
+    !else
 !!$      open(unit=25000+mynum, file=datapath(1:lfdata)//filename//'_' &
 !!$                                  //appmynum//'_'//appisnap//'.bindat', &
 !!$           FORM="UNFORMATTED", STATUS="UNKNOWN", POSITION="REWIND")
-      !write(*,*) 'dumping file ', datapath(1:lfdata)//filename//'_' &
-      !     //appmynum//'.bindat'
-      open(unit=25000+mynum, file=datapath(1:lfdata)//filename//'_' &
-           //appmynum//'.bindat', &
-           FORM="UNFORMATTED", STATUS="UNKNOWN", POSITION="APPEND")
-      write(25000+mynum) pack(buff_to_dump(ibeg:iend,ibeg:iend,:), .true.)
-      close(25000+mynum)
-   !end if
-
- end subroutine dump_field_1d_cp
+    !write(*,*) 'dumping file ', datapath(1:lfdata)//filename//'_' &
+    !     //appmynum//'.bindat'
+    open(unit=25000+mynum, file=datapath(1:lfdata)//filename//'_' &
+         //appmynum//'.bindat', &
+         FORM="UNFORMATTED", STATUS="UNKNOWN", POSITION="APPEND")
+    write(25000+mynum) pack(buff_to_dump(ibeg:iend,ibeg:iend,:), .true.)
+    close(25000+mynum)
+    !end if
+    
+  end subroutine dump_field_1d_cp
 !-----------------------------------------------------------------------------------------
-
- subroutine dump_wavefields_mesh_1d_cp
-
-   
-   real(kind=dp)   , dimension(:,:,:), allocatable :: ssol, zsol
-   integer, allocatable :: lnods_to_store(:,:)
-   integer iel,ipol,jpol
-
-
-   ! solid part only for now
-   allocate(ssol(ibeg:iend,ibeg:iend,nb_elm_to_store))
-   allocate(zsol(ibeg:iend,ibeg:iend,nb_elm_to_store))
-   allocate(lnods_to_store(nb_elm_to_store,4))
-
-   !!write(*,*) 'nb_elm_to_store ::',nb_elm_to_store
-   do iel=1,nb_elm_to_store 
-
-      lnods_to_store(iel,1)=lnods(id_elm_to_store(iel),3)
-      lnods_to_store(iel,2)=lnods(id_elm_to_store(iel),1)
-      lnods_to_store(iel,3)=lnods(id_elm_to_store(iel),7)
-      lnods_to_store(iel,4)=lnods(id_elm_to_store(iel),5)
-
-      do jpol=ibeg,iend
-         do ipol=ibeg,iend
-            ssol(ipol,jpol,iel) = scoord(ipol,jpol,ielsolid((id_elm_to_store(iel))))
-            zsol(ipol,jpol,iel) = zcoord(ipol,jpol,ielsolid((id_elm_to_store(iel))))
-            !!write(*,*) ipol,jpol,iel,ssol(ipol,jpol,iel)
-         end do
-      end do
-   end do
-
-   open(unit=2500+mynum,file=datapath(1:lfdata)//'/mesh_sol_'&
-        //appmynum//'.dat', &
-        FORM="UNFORMATTED")
-   write(2500+mynum) ssol(ibeg:iend,ibeg:iend,:),zsol(ibeg:iend,ibeg:iend,:)
-   close(2500+mynum)
-
-
-   open(unit=2500+mynum,file=datapath(1:lfdata)//'/lnods_sol_'&
-        //appmynum//'.dat', &
-        FORM="UNFORMATTED")
-   write(2500+mynum)  lnods_to_store
-   close(2500+mynum)
-   
-   
-   
-   deallocate(ssol,zsol)
-   deallocate(lnods_to_store)
-
- end subroutine dump_wavefields_mesh_1d_cp
-
-
- subroutine  finalize_coupling 
-   open(10,file='nb_rec_to_read.par')
-   write(10,*) nstrain
-   close(10)
- end subroutine finalize_coupling
-
-end module
+  
+  
+!================================================================================
+! Dumping routine
+  subroutine dump_wavefields_mesh_1d_cp
+    real(kind=dp)   , dimension(:,:,:), allocatable :: ssol, zsol
+    integer, allocatable :: lnods_to_store(:,:)
+    integer iel,ipol,jpol
+    
+    
+    ! solid part only for now
+    allocate(ssol(ibeg:iend,ibeg:iend,nb_elm_to_store))
+    allocate(zsol(ibeg:iend,ibeg:iend,nb_elm_to_store))
+    allocate(lnods_to_store(nb_elm_to_store,4))
+    
+    !!write(*,*) 'nb_elm_to_store ::',nb_elm_to_store
+    do iel=1,nb_elm_to_store 
+       
+       lnods_to_store(iel,1)=lnods(id_elm_to_store(iel),3)
+       lnods_to_store(iel,2)=lnods(id_elm_to_store(iel),1)
+       lnods_to_store(iel,3)=lnods(id_elm_to_store(iel),7)
+       lnods_to_store(iel,4)=lnods(id_elm_to_store(iel),5)
+       
+       do jpol=ibeg,iend
+          do ipol=ibeg,iend
+             ssol(ipol,jpol,iel) = scoord(ipol,jpol,ielsolid((id_elm_to_store(iel))))
+             zsol(ipol,jpol,iel) = zcoord(ipol,jpol,ielsolid((id_elm_to_store(iel))))
+             !!write(*,*) ipol,jpol,iel,ssol(ipol,jpol,iel)
+          end do
+       end do
+    end do
+    
+    open(unit=2500+mynum,file=datapath(1:lfdata)//'/mesh_sol_'&
+         //appmynum//'.dat', &
+         FORM="UNFORMATTED")
+    write(2500+mynum) ssol(ibeg:iend,ibeg:iend,:),zsol(ibeg:iend,ibeg:iend,:)
+    close(2500+mynum)
+    
+    
+    open(unit=2500+mynum,file=datapath(1:lfdata)//'/lnods_sol_'&
+         //appmynum//'.dat', &
+         FORM="UNFORMATTED")
+    write(2500+mynum)  lnods_to_store
+    close(2500+mynum)
+    
+    
+    
+    deallocate(ssol,zsol)
+    deallocate(lnods_to_store)
+    
+  end subroutine dump_wavefields_mesh_1d_cp
+  
+  
+  subroutine  finalize_coupling 
+    open(10,file='nb_rec_to_read.par')
+    write(10,*) nstrain
+    close(10)
+  end subroutine finalize_coupling
+  
+end module coupling_mod

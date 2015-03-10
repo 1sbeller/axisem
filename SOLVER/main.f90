@@ -80,7 +80,7 @@ program axisem
 
 !!!!  BEGIN TEST MODIFS COUPLING (SB)
   if (coupling) then
-     call read_boundary_coordinates
+     call initialize_coupling
      call barrier
   end if
 !!!!! END MODFIS

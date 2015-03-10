@@ -33,7 +33,7 @@ module time_evol_wave
   use seismograms
   use rotations 
   use data_io,          only: verbose
-  use coupling_mod,     only: dump_field_1d_cp !, dump_wavefields_mesh_1d_cp
+  use coupling_mod,     only: dump_field_1d_cp !, dump_wavefields_mesh_1d_cp VM
 
   implicit none
   public :: prepare_waves, time_loop
@@ -118,6 +118,7 @@ subroutine prepare_waves
      !   end select
      !endif
      !!!!! END OLD VERSION
+
      call dump_wavefields_mesh_1d
   endif
 
@@ -1190,13 +1191,16 @@ subroutine dump_stuff(iter, iseismo, istrain, isnap,     &
             call compute_strain(disp, chi, istrain)    ! strain globally
             call dump_velo_global(velo, dchi, istrain) ! velocity globally
            
-!!!!!! OLD AXISEM SB
+!!!!!!  SB
         case ('coupling') ! VM VM dump veloc and stress
            !call compute_strain_cp(disp,velo,chi)  !! VM VM
            !write(*,*) 'DUMP COUPLING FILES' 
            call compute_stress_cp(disp,velo,chi,istrain) !! VM VM
            !!     call dump_velo_global_cp(velo,dchi)  !!  _cp means coupling
-!!!!! OLD AXISEM
+        case ('coupling_boxpoints')
+           call compute_stress_cp(disp,velo,chi,istrain) !! VM VM
+
+!!!!! END SB
         end select
        
         !> Check, whether it is time to dump the buffer variables to disk and if so,

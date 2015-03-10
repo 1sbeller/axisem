@@ -1139,6 +1139,27 @@ subroutine dump_wavefields_mesh_1d
 
   endif
 
+  !!! SB
+  if (dump_type=='coupling' .or. dump_type == 'coupling_box') then
+     
+     ibeg = 0
+     iend = 4
+     jbeg = 0
+     jend = 4
+     if (lpr) then
+        write(6,*)'  Coupling : FORCE GLL boundaries to:'
+        write(6,*)'    ipol=', ibeg, iend
+        write(6,*)'    jpol=', jbeg, jend
+     endif
+
+     allocate(ssol(ibeg:iend,jbeg:jend,nel_solid))
+     allocate(zsol(ibeg:iend,jbeg:jend,nel_solid))
+     allocate(sflu(ibeg:iend,jbeg:jend,nel_fluid))
+     allocate(zflu(ibeg:iend,jbeg:jend,nel_fluid))
+
+  endif
+  !!! END SB
+
   if (dump_type == 'displ_only' .or. dump_type == 'strain_only') then
      call dump_kwf_grid()
   else
@@ -1245,11 +1266,25 @@ subroutine dump_wavefields_mesh_1d
 
      write(6,*)'  ...dumped it all.'
 
- case ('fullfields') !Hardcoded choice in parameters.f90:110
+  case ('fullfields') !Hardcoded choice in parameters.f90:110
      if (lpr) then
         write(6,*)'  strain dump: Global strain tensor and velocity fields'
         write(6,*)'  ....no need to dump anything else.'
      endif
+
+  !!! SB
+  case ('coupling')
+     if (lpr) then
+        write(6,*)'  strain dump: Global strain tensor and velocity fields'
+        write(6,*)'  ....no need to dump anything else.'
+     endif
+
+  case ('coupling_boxpoints')
+     if (lpr) then
+        write(6,*)'  strain dump: Global strain tensor and velocity fields'
+        write(6,*)'  ....no need to dump anything else.'
+     endif
+  !!! END SB
   case default
      if (lpr) then 
         write(6,*)'  wavefield dumping type',dump_type,' unknown!'
