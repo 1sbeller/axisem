@@ -33,7 +33,8 @@ module time_evol_wave
   use seismograms
   use rotations 
   use data_io,          only: verbose
-  
+  use coupling_mod,     only: dump_field_1d_cp !, dump_wavefields_mesh_1d_cp
+
   implicit none
   public :: prepare_waves, time_loop
   private
@@ -1190,11 +1191,11 @@ subroutine dump_stuff(iter, iseismo, istrain, isnap,     &
             call dump_velo_global(velo, dchi, istrain) ! velocity globally
            
 !!!!!! OLD AXISEM SB
-!        case ('coupling') ! VM VM dump veloc and stress
-!           !call compute_strain_cp(disp,velo,chi)  !! VM VM
-!           !write(*,*) 'DUMP COUPLING FILES' 
-!           call compute_stress_cp(disp,velo,chi) !! VM VM
-!           !!     call dump_velo_global_cp(velo,dchi)  !!  _cp means coupling
+        case ('coupling') ! VM VM dump veloc and stress
+           !call compute_strain_cp(disp,velo,chi)  !! VM VM
+           !write(*,*) 'DUMP COUPLING FILES' 
+           call compute_stress_cp(disp,velo,chi,istrain) !! VM VM
+           !!     call dump_velo_global_cp(velo,dchi)  !!  _cp means coupling
 !!!!! OLD AXISEM
         end select
        
@@ -1578,126 +1579,128 @@ end subroutine bdry_copy2solid
 !################## Import vadim's routine just in case #########################
 !################################################################################
 !################################################################################
-!!$
-!!$!=============================================================================
-!!$!!
-!!$!! VM VM 
-!!$!! VM VM 
-!!$!! 
-!!$!!  SUBROUTINE FOR COUPLING METHODS
-!!$!!
-!!$!! 
-!!$
-!!$subroutine compute_strain_cp(u, v, chi)
-!!$
-!!$  use coupling_mod,             only: lambda_cp,mu_cp
-!!$  use data_pointwise,           only: inv_rho_fluid, prefac_inv_s_rho_fluid
-!!$  use data_source,              only: src_type
-!!$  use pointwise_derivatives,    only: axisym_gradient_fluid_add
-!!$  use pointwise_derivatives,    only: axisym_gradient_fluid
-!!$  use pointwise_derivatives,    only: axisym_gradient_solid_add
-!!$  use pointwise_derivatives,    only: axisym_gradient_solid
-!!$  use pointwise_derivatives,    only: f_over_s_solid
-!!$  use pointwise_derivatives,    only: f_over_s_fluid
-!!$  use wavefields_io,            only: dump_field_1d
-!!$  
-!!$  use data_mesh
-!!$  
-!!$  
-!!$  real(kind=realkind), intent(in) :: u(0:,0:,:,:),v(0:,0:,:,:)
-!!$  real(kind=realkind), intent(in) :: chi(0:,0:,:)
-!!$  
-!!$  real(kind=realkind)             :: grad_sol(0:npol,0:npol,nel_solid,2)
-!!$  real(kind=realkind)             :: grad_sol_save(0:npol,0:npol,nel_solid)
-!!$  real(kind=realkind)             :: buff_solid(0:npol,0:npol,nel_solid)
-!!$  real(kind=realkind)             :: usz_fluid(0:npol,0:npol,nel_fluid,2)
-!!$  real(kind=realkind)             :: up_fluid(0:npol,0:npol,nel_fluid)
-!!$  real(kind=realkind)             :: grad_flu(0:npol,0:npol,nel_fluid,2)
-!!$  character(len=5)                :: appisnap
-!!$  real(kind=realkind), parameter  :: two_rk = real(2, kind=realkind)
-!!$  logical, parameter :: have_fluid_cp=.false. !! FOR NOW THE BOX IS ASSUMED TO BE IN SOLID REGION
-!!$
-!!$  call define_io_appendix(appisnap,istrain)
-!!$ 
-!!$  ! SSSSSSS Solid region SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
-!!$ 
-!!$  ! s,z components, identical for all source types..........................
-!!$  if (src_type(1)=='dipole') then
-!!$     call axisym_gradient_solid(u(:,:,:,1) + u(:,:,:,2), grad_sol)
-!!$  else
-!!$     call axisym_gradient_solid(u(:,:,:,1), grad_sol) ! 1: dsus, 2: dzus
-!!$  endif
-!!$  !                                        '/stress_Sg11_sol' 
-!!$  call dump_field_1d_cp(grad_sol(:,:,:,1), '/strain_dsus_sol', appisnap, nel_solid) !E11
-!!$  grad_sol_save=grad_sol(:,:,:,1)
-!!$
-!!$  call axisym_gradient_solid_add(u(:,:,:,3), grad_sol) ! 1:dsuz+dzus,2:dzuz+dsus
-!!$ 
-!!$  ! calculate entire E31 term: (dsuz+dzus)/2
-!!$  grad_sol(:,:,:,1) = grad_sol(:,:,:,1) / two_rk
-!!$  call dump_field_1d_cp(grad_sol(:,:,:,1), '/strain_dsuz_sol', appisnap, nel_solid) !E31
-!!$  
-!!$  ! Components involving phi....................................................
-!!$  if (src_type(1) == 'monopole') then
-!!$     buff_solid = f_over_s_solid(u(:,:,:,1))
-!!$     call dump_field_1d_cp(buff_solid, '/strain_dpup_sol', appisnap, nel_solid) !E22
-!!$     !call dump_field_1d_cp(buff_solid - grad_sol_save, '/strain_dzuz_sol', appisnap, nel_solid) !E33
-!!$     call dump_field_1d_cp(buff_solid + grad_sol(:,:,:,2), '/straintrace_sol', appisnap, &
-!!$                        nel_solid) !Ekk
-!!$     
-!!$     !! VM VM add displ dump
-!!$     call dump_field_1d_cp(u(:,:,:,1),'/displacement_us', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(u(:,:,:,3),'/displacement_uz', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(v(:,:,:,1),'/velocityfiel_us', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(v(:,:,:,3),'/velocityfiel_uz', appisnap, nel_solid)
-!!$     
-!!$  elseif (src_type(1) == 'dipole') then 
-!!$     buff_solid = two_rk * f_over_s_solid(u(:,:,:,2))
-!!$     call dump_field_1d_cp(buff_solid, '/strain_dpup_sol', appisnap, nel_solid) !E22
-!!$     !call dump_field_1d_cp(buff_solid - grad_sol_save, '/strain_dzuz_sol', appisnap, nel_solid) !E33
-!!$     call dump_field_1d_cp(buff_solid + grad_sol(:,:,:,2), '/straintrace_sol', appisnap, &
-!!$                        nel_solid) ! Ekk
-!!$ 
-!!$     call axisym_gradient_solid(u(:,:,:,1) - u(:,:,:,2), grad_sol) !1:dsup,2:dzup
-!!$
-!!$     call dump_field_1d_cp(- f_over_s_solid(u(:,:,:,2)) - grad_sol(:,:,:,1) / two_rk, &
-!!$                        '/strain_dsup_sol', appisnap, nel_solid) !E12
-!!$ 
-!!$     call dump_field_1d_cp(- (f_over_s_solid(u(:,:,:,3)) +  grad_sol(:,:,:,2)) / two_rk, &
-!!$                        '/strain_dzup_sol', appisnap, nel_solid) !E23
-!!$ 
-!!$     !! VM VM add displ dump
-!!$     call dump_field_1d_cp(u(:,:,:,1)+u(:,:,:,2),'/displacement_us', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(u(:,:,:,1)-u(:,:,:,2),'/displacement_up', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(u(:,:,:,3),'/displacement_uz', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(v(:,:,:,1)+v(:,:,:,2),'/velocityfiel_us', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(v(:,:,:,1)-v(:,:,:,2),'/velocityfiel_up', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(v(:,:,:,3),'/velocityfiel_uz', appisnap, nel_solid)
-!!$
-!!$  elseif (src_type(1) == 'quadpole') then
-!!$     buff_solid = f_over_s_solid(u(:,:,:,1) - two_rk * u(:,:,:,2))
-!!$     call dump_field_1d_cp(buff_solid, '/strain_dpup_sol', appisnap, nel_solid) !E22
-!!$     !call dump_field_1d_cp(buff_solid - grad_sol_save, '/strain_dzuz_sol', appisnap, nel_solid) !E33
-!!$     call dump_field_1d_cp(buff_solid + grad_sol(:,:,:,2), & !Ekk
-!!$                        '/straintrace_sol', appisnap, nel_solid) 
-!!$  
-!!$     call axisym_gradient_solid(u(:,:,:,2), grad_sol) ! 1: dsup, 2: dzup
-!!$ 
-!!$     call dump_field_1d_cp(- f_over_s_solid(u(:,:,:,1) + u(:,:,:,2) / two_rk) &
-!!$                            - grad_sol(:,:,:,1) / two_rk, &
-!!$                        '/strain_dsup_sol', appisnap, nel_solid) !E12
-!!$  
-!!$     call dump_field_1d_cp(- f_over_s_solid(u(:,:,:,3)) - grad_sol(:,:,:,2) / two_rk, &
-!!$                        '/strain_dzup_sol',appisnap, nel_solid) !E23
-!!$     
-!!$     !! VM VM add displ dump
-!!$     call dump_field_1d_cp(u(:,:,:,1),'/displacement_us', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(u(:,:,:,2),'/displacement_up', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(u(:,:,:,3),'/displacement_uz', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(V(:,:,:,1),'/velocityfiel_us', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(V(:,:,:,2),'/velocityfiel_up', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(V(:,:,:,3),'/velocityfiel_uz', appisnap, nel_solid)
-!!$  endif
+
+!=============================================================================
+!!
+!! VM VM 
+!! VM VM 
+!! 
+!!  SUBROUTINE FOR COUPLING METHODS
+!!
+!! 
+
+subroutine compute_strain_cp(u, v, chi, istrain)
+
+  use coupling_mod,             only: lambda_cp,mu_cp
+  !use data_pointwise,           only: inv_rho_fluid, prefac_inv_s_rho_fluid
+  use data_source,              only: src_type
+  !use pointwise_derivatives,    only: axisym_gradient_fluid_add
+  !use pointwise_derivatives,    only: axisym_gradient_fluid
+  use pointwise_derivatives,    only: axisym_gradient_solid_add
+  use pointwise_derivatives,    only: axisym_gradient_solid
+  use pointwise_derivatives,    only: f_over_s_solid
+  !use pointwise_derivatives,    only: f_over_s_fluid
+  use wavefields_io,            only: dump_field_1d
+  
+  use data_mesh
+  
+  
+  real(kind=realkind), intent(in) :: u(0:,0:,:,:),v(0:,0:,:,:)
+  real(kind=realkind), intent(in) :: chi(0:,0:,:)
+  
+  real(kind=realkind)             :: grad_sol(0:npol,0:npol,nel_solid,2)
+  real(kind=realkind)             :: grad_sol_save(0:npol,0:npol,nel_solid)
+  real(kind=realkind)             :: buff_solid(0:npol,0:npol,nel_solid)
+  real(kind=realkind)             :: usz_fluid(0:npol,0:npol,nel_fluid,2)
+  real(kind=realkind)             :: up_fluid(0:npol,0:npol,nel_fluid)
+  real(kind=realkind)             :: grad_flu(0:npol,0:npol,nel_fluid,2)
+  character(len=5)                :: appisnap
+  real(kind=realkind), parameter  :: two_rk = real(2, kind=realkind)
+  logical, parameter :: have_fluid_cp=.false. !! FOR NOW THE BOX IS ASSUMED TO BE IN SOLID REGION
+
+  integer :: istrain 
+
+  call define_io_appendix(appisnap,istrain)
+ 
+  ! SSSSSSS Solid region SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+ 
+  ! s,z components, identical for all source types..........................
+  if (src_type(1)=='dipole') then
+     call axisym_gradient_solid(u(:,:,:,1) + u(:,:,:,2), grad_sol)
+  else
+     call axisym_gradient_solid(u(:,:,:,1), grad_sol) ! 1: dsus, 2: dzus
+  endif
+  !                                        '/stress_Sg11_sol' 
+  call dump_field_1d_cp(grad_sol(:,:,:,1), '/strain_dsus_sol', appisnap, nel_solid) !E11
+  grad_sol_save=grad_sol(:,:,:,1)
+
+  call axisym_gradient_solid_add(u(:,:,:,3), grad_sol) ! 1:dsuz+dzus,2:dzuz+dsus
+ 
+  ! calculate entire E31 term: (dsuz+dzus)/2
+  grad_sol(:,:,:,1) = grad_sol(:,:,:,1) / two_rk
+  call dump_field_1d_cp(grad_sol(:,:,:,1), '/strain_dsuz_sol', appisnap, nel_solid) !E31
+  
+  ! Components involving phi....................................................
+  if (src_type(1) == 'monopole') then
+     buff_solid = f_over_s_solid(u(:,:,:,1))
+     call dump_field_1d_cp(buff_solid, '/strain_dpup_sol', appisnap, nel_solid) !E22
+     !call dump_field_1d_cp(buff_solid - grad_sol_save, '/strain_dzuz_sol', appisnap, nel_solid) !E33
+     call dump_field_1d_cp(buff_solid + grad_sol(:,:,:,2), '/straintrace_sol', appisnap, &
+                        nel_solid) !Ekk
+     
+     !! VM VM add displ dump
+     call dump_field_1d_cp(u(:,:,:,1),'/displacement_us', appisnap, nel_solid)
+     call dump_field_1d_cp(u(:,:,:,3),'/displacement_uz', appisnap, nel_solid)
+     call dump_field_1d_cp(v(:,:,:,1),'/velocityfiel_us', appisnap, nel_solid)
+     call dump_field_1d_cp(v(:,:,:,3),'/velocityfiel_uz', appisnap, nel_solid)
+     
+  elseif (src_type(1) == 'dipole') then 
+     buff_solid = two_rk * f_over_s_solid(u(:,:,:,2))
+     call dump_field_1d_cp(buff_solid, '/strain_dpup_sol', appisnap, nel_solid) !E22
+     !call dump_field_1d_cp(buff_solid - grad_sol_save, '/strain_dzuz_sol', appisnap, nel_solid) !E33
+     call dump_field_1d_cp(buff_solid + grad_sol(:,:,:,2), '/straintrace_sol', appisnap, &
+                        nel_solid) ! Ekk
+ 
+     call axisym_gradient_solid(u(:,:,:,1) - u(:,:,:,2), grad_sol) !1:dsup,2:dzup
+
+     call dump_field_1d_cp(- f_over_s_solid(u(:,:,:,2)) - grad_sol(:,:,:,1) / two_rk, &
+                        '/strain_dsup_sol', appisnap, nel_solid) !E12
+ 
+     call dump_field_1d_cp(- (f_over_s_solid(u(:,:,:,3)) +  grad_sol(:,:,:,2)) / two_rk, &
+                        '/strain_dzup_sol', appisnap, nel_solid) !E23
+ 
+     !! VM VM add displ dump
+     call dump_field_1d_cp(u(:,:,:,1)+u(:,:,:,2),'/displacement_us', appisnap, nel_solid)
+     call dump_field_1d_cp(u(:,:,:,1)-u(:,:,:,2),'/displacement_up', appisnap, nel_solid)
+     call dump_field_1d_cp(u(:,:,:,3),'/displacement_uz', appisnap, nel_solid)
+     call dump_field_1d_cp(v(:,:,:,1)+v(:,:,:,2),'/velocityfiel_us', appisnap, nel_solid)
+     call dump_field_1d_cp(v(:,:,:,1)-v(:,:,:,2),'/velocityfiel_up', appisnap, nel_solid)
+     call dump_field_1d_cp(v(:,:,:,3),'/velocityfiel_uz', appisnap, nel_solid)
+
+  elseif (src_type(1) == 'quadpole') then
+     buff_solid = f_over_s_solid(u(:,:,:,1) - two_rk * u(:,:,:,2))
+     call dump_field_1d_cp(buff_solid, '/strain_dpup_sol', appisnap, nel_solid) !E22
+     !call dump_field_1d_cp(buff_solid - grad_sol_save, '/strain_dzuz_sol', appisnap, nel_solid) !E33
+     call dump_field_1d_cp(buff_solid + grad_sol(:,:,:,2), & !Ekk
+                        '/straintrace_sol', appisnap, nel_solid) 
+  
+     call axisym_gradient_solid(u(:,:,:,2), grad_sol) ! 1: dsup, 2: dzup
+ 
+     call dump_field_1d_cp(- f_over_s_solid(u(:,:,:,1) + u(:,:,:,2) / two_rk) &
+                            - grad_sol(:,:,:,1) / two_rk, &
+                        '/strain_dsup_sol', appisnap, nel_solid) !E12
+  
+     call dump_field_1d_cp(- f_over_s_solid(u(:,:,:,3)) - grad_sol(:,:,:,2) / two_rk, &
+                        '/strain_dzup_sol',appisnap, nel_solid) !E23
+     
+     !! VM VM add displ dump
+     call dump_field_1d_cp(u(:,:,:,1),'/displacement_us', appisnap, nel_solid)
+     call dump_field_1d_cp(u(:,:,:,2),'/displacement_up', appisnap, nel_solid)
+     call dump_field_1d_cp(u(:,:,:,3),'/displacement_uz', appisnap, nel_solid)
+     call dump_field_1d_cp(V(:,:,:,1),'/velocityfiel_us', appisnap, nel_solid)
+     call dump_field_1d_cp(V(:,:,:,2),'/velocityfiel_up', appisnap, nel_solid)
+     call dump_field_1d_cp(V(:,:,:,3),'/velocityfiel_uz', appisnap, nel_solid)
+  endif
 !!$ 
 !!$  ! FFFFFF Fluid region FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 !!$  !
@@ -1776,208 +1779,209 @@ end subroutine bdry_copy2solid
 !!$     endif   !src_type
 !!$ 
 !!$  endif   ! have_fluid
-!!$ 
-!!$end subroutine compute_strain_cp
-!!$
-!!$
-!!$subroutine compute_stress_cp(u, v, chi)
-!!$  
-!!$  use coupling_mod,             only: lambda_cp,mu_cp,is_in_box
-!!$  use data_pointwise,           only: inv_rho_fluid, prefac_inv_s_rho_fluid
-!!$  use data_source,              only: src_type
-!!$  use pointwise_derivatives,    only: axisym_gradient_fluid_add
-!!$  use pointwise_derivatives,    only: axisym_gradient_fluid
-!!$  use pointwise_derivatives,    only: axisym_gradient_solid_add
-!!$  use pointwise_derivatives,    only: axisym_gradient_solid
-!!$  use pointwise_derivatives,    only: f_over_s_solid
-!!$  use pointwise_derivatives,    only: f_over_s_fluid
-!!$  use wavefields_io,            only: dump_field_1d
-!!$  
-!!$  use data_mesh
-!!$  
-!!$  
-!!$  real(kind=realkind), intent(in) :: u(0:,0:,:,:),v(0:,0:,:,:)
-!!$  real(kind=realkind), intent(in) :: chi(0:,0:,:)
-!!$  
-!!$  real(kind=realkind)             :: strain(0:npol,0:npol,nel_solid,6)
-!!$  real(kind=realkind)             :: stress(0:npol,0:npol,nel_solid,6)
-!!$  real(kind=realkind)             :: grad_sol(0:npol,0:npol,nel_solid,2)
-!!$  real(kind=realkind)             :: grad_sol_save(0:npol,0:npol,nel_solid)
-!!$  real(kind=realkind)             :: buff_solid(0:npol,0:npol,nel_solid)
-!!$  real(kind=realkind)             :: usz_fluid(0:npol,0:npol,nel_fluid,2)
-!!$  real(kind=realkind)             :: up_fluid(0:npol,0:npol,nel_fluid)
-!!$  real(kind=realkind)             :: grad_flu(0:npol,0:npol,nel_fluid,2)
-!!$  character(len=5)                :: appisnap
-!!$  real(kind=realkind), parameter  :: two_rk = real(2, kind=realkind)
-!!$  logical, parameter :: have_fluid_cp=.false. !! FOR NOW THE BOX IS ASSUMED TO BE IN SOLID REGION
-!!$
-!!$  integer iel0,iel,i,j
-!!$  real(kind=realkind) l,m
-!!$
-!!$  strain=0.
-!!$  stress=0.
-!!$  !! 1:ss, 2:pp, 3:zz, 4:sp, 5:sz, 6:pz
-!!$  call define_io_appendix(appisnap,istrain)
-!!$ 
-!!$  ! SSSSSSS Solid region SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
-!!$  select case (trim(src_type(1)))
-!!$  case ('monopole')
-!!$
-!!$     ! compute strain
-!!$     call axisym_gradient_solid(u(:,:,:,1), grad_sol) ! 1: dsus, 2: dzus
-!!$     strain(:,:,:,1)=grad_sol(:,:,:,1)
-!!$     grad_sol_save=grad_sol(:,:,:,1)
-!!$
-!!$     call axisym_gradient_solid_add(u(:,:,:,3), grad_sol) ! 1:dsuz+dzus,2:dzuz+dsus
-!!$     strain(:,:,:,5)=grad_sol(:,:,:,1) / two_rk
-!!$     
-!!$     buff_solid = f_over_s_solid(u(:,:,:,1))
-!!$     strain(:,:,:,2)= buff_solid
-!!$     
-!!$     strain(:,:,:,3)=grad_sol(:,:,:,2) - grad_sol_save
-!!$     
-!!$     ! compute stress
-!!$     do iel=1,nel_solid
-!!$        iel0=ielsolid(iel)
-!!$        do j=0,npol
-!!$           do i=0,npol
-!!$              l=lambda_cp(i,j,iel0)
-!!$              m=mu_cp(i,j,iel0)
-!!$              !if (is_in_box(iel0)>0) write(*,*) 'l,m :',iel0,l,m
-!!$              stress(i,j,iel,1) = (l+2.*m)*(strain(i,j,iel,1) + strain(i,j,iel,2)) -2.*m*strain(i,j,iel,2) + l*strain(i,j,iel,3)
-!!$              stress(i,j,iel,2) = (l+2.*m)*(strain(i,j,iel,1) + strain(i,j,iel,2)) -2.*m*strain(i,j,iel,1) + l*strain(i,j,iel,3)
-!!$              stress(i,j,iel,3) = l*(strain(i,j,iel,1) + strain(i,j,iel,2)) + (l+2*m)*strain(i,j,iel,3)
-!!$              stress(i,j,iel,5) = 2.*m*strain(i,j,iel,5)
-!!$           end do
-!!$        end do
-!!$     end do
-!!$
-!!$    
-!!$     
-!!$    !!
-!!$
-!!$     !!stress=strain !! VM VM to test the strain
-!!$     call dump_field_1d_cp(u(:,:,:,1),'/displacement_us', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(u(:,:,:,3),'/displacement_uz', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(v(:,:,:,1),'/velocityfiel_us', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(v(:,:,:,3),'/velocityfiel_uz', appisnap, nel_solid)
-!!$
-!!$                                      
-!!$     call dump_field_1d_cp(stress(:,:,:,1),'/stress_Sg11_sol', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(stress(:,:,:,2),'/stress_Sg22_sol', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(stress(:,:,:,3),'/stress_Sg33_sol', appisnap, nel_solid)
-!!$     !call dump_field_1d_cp(stress(:,:,:,4),'/stress_Sg12_sol', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(stress(:,:,:,5),'/stress_Sg13_sol', appisnap, nel_solid)
-!!$     !call dump_field_1d_cp(stress(:,:,:,6),'/stress_Sg23_sol', appisnap, nel_solid)
-!!$
-!!$  case ('dipole')
-!!$      call axisym_gradient_solid(u(:,:,:,1) + u(:,:,:,2), grad_sol)
-!!$      strain(:,:,:,1)=grad_sol(:,:,:,1)
-!!$      grad_sol_save=grad_sol(:,:,:,1)
-!!$
-!!$      call axisym_gradient_solid_add(u(:,:,:,3), grad_sol) ! 1:dsuz+dzus,2:dzuz+dsus
-!!$      strain(:,:,:,5)=grad_sol(:,:,:,1) / two_rk
-!!$      
-!!$      buff_solid = two_rk * f_over_s_solid(u(:,:,:,2))
-!!$      strain(:,:,:,2)= buff_solid
-!!$      
-!!$      strain(:,:,:,3)=grad_sol(:,:,:,2) - grad_sol_save
-!!$
-!!$      call axisym_gradient_solid(u(:,:,:,1) - u(:,:,:,2), grad_sol) !1:dsup,2:dzup
-!!$      strain(:,:,:,4) =  f_over_s_solid(u(:,:,:,2)) + grad_sol(:,:,:,1) / two_rk !! VM VM
-!!$      strain(:,:,:,6) = (f_over_s_solid(u(:,:,:,3)) -  grad_sol(:,:,:,2)) / two_rk
-!!$      ! compute stress
-!!$      do iel=1,nel_solid
-!!$         iel0=ielsolid(iel)
-!!$         do j=0,npol
-!!$            do i=0,npol
-!!$               l=lambda_cp(i,j,iel0)
-!!$               m=mu_cp(i,j,iel0)
-!!$               
-!!$               stress(i,j,iel,1) = (l+2.*m)*(strain(i,j,iel,1) + strain(i,j,iel,2)) -2.*m*strain(i,j,iel,2) + l*strain(i,j,iel,3)
-!!$               stress(i,j,iel,2) = (l+2.*m)*(strain(i,j,iel,1) + strain(i,j,iel,2)) -2.*m*strain(i,j,iel,1) + l*strain(i,j,iel,3)
-!!$               stress(i,j,iel,3) = l*(strain(i,j,iel,1) + strain(i,j,iel,2)) + (l+2*m)*strain(i,j,iel,3)
-!!$               stress(i,j,iel,4) = 2.*m*strain(i,j,iel,4)
-!!$               stress(i,j,iel,5) = 2.*m*strain(i,j,iel,5)
-!!$               stress(i,j,iel,6) = 2.*m*strain(i,j,iel,6)
-!!$            end do
-!!$        end do
-!!$     end do
-!!$      
-!!$     call dump_field_1d_cp(u(:,:,:,1)+u(:,:,:,2),'/displacement_us', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(u(:,:,:,1)-u(:,:,:,2),'/displacement_up', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(u(:,:,:,3),'/displacement_uz', appisnap, nel_solid)
-!!$
-!!$     call dump_field_1d_cp(v(:,:,:,1)+v(:,:,:,2),'/velocityfiel_us', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(v(:,:,:,1)-v(:,:,:,2),'/velocityfiel_up', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(v(:,:,:,3),'/velocityfiel_uz', appisnap, nel_solid)
-!!$                                  
-!!$     call dump_field_1d_cp(stress(:,:,:,1),'/stress_Sg11_sol', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(stress(:,:,:,2),'/stress_Sg22_sol', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(stress(:,:,:,3),'/stress_Sg33_sol', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(stress(:,:,:,4),'/stress_Sg12_sol', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(stress(:,:,:,5),'/stress_Sg13_sol', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(stress(:,:,:,6),'/stress_Sg23_sol', appisnap, nel_solid)
-!!$
-!!$  case('quadpole')
-!!$     
-!!$     call axisym_gradient_solid(u(:,:,:,1), grad_sol) ! 1: dsus, 2: dzus
-!!$     strain(:,:,:,1)=grad_sol(:,:,:,1)
-!!$     grad_sol_save=grad_sol(:,:,:,1)
-!!$
-!!$     call axisym_gradient_solid_add(u(:,:,:,3), grad_sol)
-!!$     strain(:,:,:,5)= grad_sol(:,:,:,1) / two_rk
-!!$     
-!!$     buff_solid = f_over_s_solid(u(:,:,:,1) - two_rk * u(:,:,:,2))
-!!$     strain(:,:,:,2)= buff_solid
-!!$     
-!!$     strain(:,:,:,3)=grad_sol(:,:,:,2) - grad_sol_save
-!!$     
-!!$     call axisym_gradient_solid(u(:,:,:,2), grad_sol) ! 1: dsup, 2: dzup
-!!$     strain(:,:,:,4) = (f_over_s_solid(- u(:,:,:,2) + 2 * u(:,:,:,1)) + grad_sol(:,:,:,1) ) /two_rk 
-!!$!- f_over_s_solid(u(:,:,:,1) + u(:,:,:,2) / two_rk) - grad_sol(:,:,:,1) / two_rk
-!!$     
-!!$     strain(:,:,:,6) =  f_over_s_solid(u(:,:,:,3)) + grad_sol(:,:,:,2) / two_rk
-!!$
-!!$     ! compute stress
-!!$     do iel=1,nel_solid
-!!$        iel0=ielsolid(iel)
-!!$        do j=0,npol
-!!$           do i=0,npol
-!!$              l=lambda_cp(i,j,iel0)
-!!$              m=mu_cp(i,j,iel0)
-!!$              
-!!$              stress(i,j,iel,1) = (l+2.*m)*(strain(i,j,iel,1) + strain(i,j,iel,2)) -2.*m*strain(i,j,iel,2) + l*strain(i,j,iel,3)
-!!$              stress(i,j,iel,2) = (l+2.*m)*(strain(i,j,iel,1) + strain(i,j,iel,2)) -2.*m*strain(i,j,iel,1) + l*strain(i,j,iel,3)
-!!$              stress(i,j,iel,3) = l*(strain(i,j,iel,1) + strain(i,j,iel,2)) + (l+2*m)*strain(i,j,iel,3)
-!!$              stress(i,j,iel,4) = 2.*m*strain(i,j,iel,4)
-!!$              stress(i,j,iel,5) = 2.*m*strain(i,j,iel,5)
-!!$              stress(i,j,iel,6) = 2.*m*strain(i,j,iel,6)
-!!$           end do
-!!$        end do
-!!$     end do
-!!$
-!!$
-!!$     
-!!$
-!!$
-!!$     call dump_field_1d_cp(u(:,:,:,1),'/displacement_us', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(u(:,:,:,2),'/displacement_up', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(u(:,:,:,3),'/displacement_uz', appisnap, nel_solid)
-!!$
-!!$     call dump_field_1d_cp(V(:,:,:,1),'/velocityfiel_us', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(V(:,:,:,2),'/velocityfiel_up', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(V(:,:,:,3),'/velocityfiel_uz', appisnap, nel_solid)
-!!$                                     
-!!$     call dump_field_1d_cp(stress(:,:,:,1),'/stress_Sg11_sol', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(stress(:,:,:,2),'/stress_Sg22_sol', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(stress(:,:,:,3),'/stress_Sg33_sol', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(stress(:,:,:,4),'/stress_Sg12_sol', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(stress(:,:,:,5),'/stress_Sg13_sol', appisnap, nel_solid)
-!!$     call dump_field_1d_cp(stress(:,:,:,6),'/stress_Sg23_sol', appisnap, nel_solid)
-!!$     
-!!$  end select
-!!$end subroutine compute_stress_cp
+ 
+end subroutine compute_strain_cp
+
+
+subroutine compute_stress_cp(u, v, chi, istrain)
+  
+  use coupling_mod,             only: lambda_cp,mu_cp,is_in_box
+  !use data_pointwise,           only: inv_rho_fluid, prefac_inv_s_rho_fluid
+  use data_source,              only: src_type
+  !use pointwise_derivatives,    only: axisym_gradient_fluid_add
+  !use pointwise_derivatives,    only: axisym_gradient_fluid
+  use pointwise_derivatives,    only: axisym_gradient_solid_add
+  use pointwise_derivatives,    only: axisym_gradient_solid
+  use pointwise_derivatives,    only: f_over_s_solid
+  !use pointwise_derivatives,    only: f_over_s_fluid
+  use wavefields_io,            only: dump_field_1d
+  
+  use data_mesh
+  
+  
+  real(kind=realkind), intent(in) :: u(0:,0:,:,:),v(0:,0:,:,:)
+  real(kind=realkind), intent(in) :: chi(0:,0:,:)
+  
+  real(kind=realkind)             :: strain(0:npol,0:npol,nel_solid,6)
+  real(kind=realkind)             :: stress(0:npol,0:npol,nel_solid,6)
+  real(kind=realkind)             :: grad_sol(0:npol,0:npol,nel_solid,2)
+  real(kind=realkind)             :: grad_sol_save(0:npol,0:npol,nel_solid)
+  real(kind=realkind)             :: buff_solid(0:npol,0:npol,nel_solid)
+  real(kind=realkind)             :: usz_fluid(0:npol,0:npol,nel_fluid,2)
+  real(kind=realkind)             :: up_fluid(0:npol,0:npol,nel_fluid)
+  real(kind=realkind)             :: grad_flu(0:npol,0:npol,nel_fluid,2)
+  character(len=5)                :: appisnap
+  real(kind=realkind), parameter  :: two_rk = real(2, kind=realkind)
+  logical, parameter :: have_fluid_cp=.false. !! FOR NOW THE BOX IS ASSUMED TO BE IN SOLID REGION
+  integer :: istrain
+
+  integer iel0,iel,i,j
+  real(kind=realkind) l,m
+
+  strain=0.
+  stress=0.
+  !! 1:ss, 2:pp, 3:zz, 4:sp, 5:sz, 6:pz
+  call define_io_appendix(appisnap,istrain)
+ 
+  ! SSSSSSS Solid region SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+  select case (trim(src_type(1)))
+  case ('monopole')
+
+     ! compute strain
+     call axisym_gradient_solid(u(:,:,:,1), grad_sol) ! 1: dsus, 2: dzus
+     strain(:,:,:,1)=grad_sol(:,:,:,1)
+     grad_sol_save=grad_sol(:,:,:,1)
+
+     call axisym_gradient_solid_add(u(:,:,:,3), grad_sol) ! 1:dsuz+dzus,2:dzuz+dsus
+     strain(:,:,:,5)=grad_sol(:,:,:,1) / two_rk
+     
+     buff_solid = f_over_s_solid(u(:,:,:,1))
+     strain(:,:,:,2)= buff_solid
+     
+     strain(:,:,:,3)=grad_sol(:,:,:,2) - grad_sol_save
+     
+     ! compute stress
+     do iel=1,nel_solid
+        iel0=ielsolid(iel)
+        do j=0,npol
+           do i=0,npol
+              l=lambda_cp(i,j,iel0)
+              m=mu_cp(i,j,iel0)
+              !if (is_in_box(iel0)>0) write(*,*) 'l,m :',iel0,l,m
+              stress(i,j,iel,1) = (l+2.*m)*(strain(i,j,iel,1) + strain(i,j,iel,2)) -2.*m*strain(i,j,iel,2) + l*strain(i,j,iel,3)
+              stress(i,j,iel,2) = (l+2.*m)*(strain(i,j,iel,1) + strain(i,j,iel,2)) -2.*m*strain(i,j,iel,1) + l*strain(i,j,iel,3)
+              stress(i,j,iel,3) = l*(strain(i,j,iel,1) + strain(i,j,iel,2)) + (l+2*m)*strain(i,j,iel,3)
+              stress(i,j,iel,5) = 2.*m*strain(i,j,iel,5)
+           end do
+        end do
+     end do
+
+    
+     
+    !!
+
+     !!stress=strain !! VM VM to test the strain
+     call dump_field_1d_cp(u(:,:,:,1),'/displacement_us', appisnap, nel_solid)
+     call dump_field_1d_cp(u(:,:,:,3),'/displacement_uz', appisnap, nel_solid)
+     call dump_field_1d_cp(v(:,:,:,1),'/velocityfiel_us', appisnap, nel_solid)
+     call dump_field_1d_cp(v(:,:,:,3),'/velocityfiel_uz', appisnap, nel_solid)
+
+                                      
+     call dump_field_1d_cp(stress(:,:,:,1),'/stress_Sg11_sol', appisnap, nel_solid)
+     call dump_field_1d_cp(stress(:,:,:,2),'/stress_Sg22_sol', appisnap, nel_solid)
+     call dump_field_1d_cp(stress(:,:,:,3),'/stress_Sg33_sol', appisnap, nel_solid)
+     !call dump_field_1d_cp(stress(:,:,:,4),'/stress_Sg12_sol', appisnap, nel_solid)
+     call dump_field_1d_cp(stress(:,:,:,5),'/stress_Sg13_sol', appisnap, nel_solid)
+     !call dump_field_1d_cp(stress(:,:,:,6),'/stress_Sg23_sol', appisnap, nel_solid)
+
+  case ('dipole')
+      call axisym_gradient_solid(u(:,:,:,1) + u(:,:,:,2), grad_sol)
+      strain(:,:,:,1)=grad_sol(:,:,:,1)
+      grad_sol_save=grad_sol(:,:,:,1)
+
+      call axisym_gradient_solid_add(u(:,:,:,3), grad_sol) ! 1:dsuz+dzus,2:dzuz+dsus
+      strain(:,:,:,5)=grad_sol(:,:,:,1) / two_rk
+      
+      buff_solid = two_rk * f_over_s_solid(u(:,:,:,2))
+      strain(:,:,:,2)= buff_solid
+      
+      strain(:,:,:,3)=grad_sol(:,:,:,2) - grad_sol_save
+
+      call axisym_gradient_solid(u(:,:,:,1) - u(:,:,:,2), grad_sol) !1:dsup,2:dzup
+      strain(:,:,:,4) =  f_over_s_solid(u(:,:,:,2)) + grad_sol(:,:,:,1) / two_rk !! VM VM
+      strain(:,:,:,6) = (f_over_s_solid(u(:,:,:,3)) -  grad_sol(:,:,:,2)) / two_rk
+      ! compute stress
+      do iel=1,nel_solid
+         iel0=ielsolid(iel)
+         do j=0,npol
+            do i=0,npol
+               l=lambda_cp(i,j,iel0)
+               m=mu_cp(i,j,iel0)
+               
+               stress(i,j,iel,1) = (l+2.*m)*(strain(i,j,iel,1) + strain(i,j,iel,2)) -2.*m*strain(i,j,iel,2) + l*strain(i,j,iel,3)
+               stress(i,j,iel,2) = (l+2.*m)*(strain(i,j,iel,1) + strain(i,j,iel,2)) -2.*m*strain(i,j,iel,1) + l*strain(i,j,iel,3)
+               stress(i,j,iel,3) = l*(strain(i,j,iel,1) + strain(i,j,iel,2)) + (l+2*m)*strain(i,j,iel,3)
+               stress(i,j,iel,4) = 2.*m*strain(i,j,iel,4)
+               stress(i,j,iel,5) = 2.*m*strain(i,j,iel,5)
+               stress(i,j,iel,6) = 2.*m*strain(i,j,iel,6)
+            end do
+        end do
+     end do
+      
+     call dump_field_1d_cp(u(:,:,:,1)+u(:,:,:,2),'/displacement_us', appisnap, nel_solid)
+     call dump_field_1d_cp(u(:,:,:,1)-u(:,:,:,2),'/displacement_up', appisnap, nel_solid)
+     call dump_field_1d_cp(u(:,:,:,3),'/displacement_uz', appisnap, nel_solid)
+
+     call dump_field_1d_cp(v(:,:,:,1)+v(:,:,:,2),'/velocityfiel_us', appisnap, nel_solid)
+     call dump_field_1d_cp(v(:,:,:,1)-v(:,:,:,2),'/velocityfiel_up', appisnap, nel_solid)
+     call dump_field_1d_cp(v(:,:,:,3),'/velocityfiel_uz', appisnap, nel_solid)
+                                  
+     call dump_field_1d_cp(stress(:,:,:,1),'/stress_Sg11_sol', appisnap, nel_solid)
+     call dump_field_1d_cp(stress(:,:,:,2),'/stress_Sg22_sol', appisnap, nel_solid)
+     call dump_field_1d_cp(stress(:,:,:,3),'/stress_Sg33_sol', appisnap, nel_solid)
+     call dump_field_1d_cp(stress(:,:,:,4),'/stress_Sg12_sol', appisnap, nel_solid)
+     call dump_field_1d_cp(stress(:,:,:,5),'/stress_Sg13_sol', appisnap, nel_solid)
+     call dump_field_1d_cp(stress(:,:,:,6),'/stress_Sg23_sol', appisnap, nel_solid)
+
+  case('quadpole')
+     
+     call axisym_gradient_solid(u(:,:,:,1), grad_sol) ! 1: dsus, 2: dzus
+     strain(:,:,:,1)=grad_sol(:,:,:,1)
+     grad_sol_save=grad_sol(:,:,:,1)
+
+     call axisym_gradient_solid_add(u(:,:,:,3), grad_sol)
+     strain(:,:,:,5)= grad_sol(:,:,:,1) / two_rk
+     
+     buff_solid = f_over_s_solid(u(:,:,:,1) - two_rk * u(:,:,:,2))
+     strain(:,:,:,2)= buff_solid
+     
+     strain(:,:,:,3)=grad_sol(:,:,:,2) - grad_sol_save
+     
+     call axisym_gradient_solid(u(:,:,:,2), grad_sol) ! 1: dsup, 2: dzup
+     strain(:,:,:,4) = (f_over_s_solid(- u(:,:,:,2) + 2 * u(:,:,:,1)) + grad_sol(:,:,:,1) ) /two_rk 
+!- f_over_s_solid(u(:,:,:,1) + u(:,:,:,2) / two_rk) - grad_sol(:,:,:,1) / two_rk
+     
+     strain(:,:,:,6) =  f_over_s_solid(u(:,:,:,3)) + grad_sol(:,:,:,2) / two_rk
+
+     ! compute stress
+     do iel=1,nel_solid
+        iel0=ielsolid(iel)
+        do j=0,npol
+           do i=0,npol
+              l=lambda_cp(i,j,iel0)
+              m=mu_cp(i,j,iel0)
+              
+              stress(i,j,iel,1) = (l+2.*m)*(strain(i,j,iel,1) + strain(i,j,iel,2)) -2.*m*strain(i,j,iel,2) + l*strain(i,j,iel,3)
+              stress(i,j,iel,2) = (l+2.*m)*(strain(i,j,iel,1) + strain(i,j,iel,2)) -2.*m*strain(i,j,iel,1) + l*strain(i,j,iel,3)
+              stress(i,j,iel,3) = l*(strain(i,j,iel,1) + strain(i,j,iel,2)) + (l+2*m)*strain(i,j,iel,3)
+              stress(i,j,iel,4) = 2.*m*strain(i,j,iel,4)
+              stress(i,j,iel,5) = 2.*m*strain(i,j,iel,5)
+              stress(i,j,iel,6) = 2.*m*strain(i,j,iel,6)
+           end do
+        end do
+     end do
+
+
+     
+
+
+     call dump_field_1d_cp(u(:,:,:,1),'/displacement_us', appisnap, nel_solid)
+     call dump_field_1d_cp(u(:,:,:,2),'/displacement_up', appisnap, nel_solid)
+     call dump_field_1d_cp(u(:,:,:,3),'/displacement_uz', appisnap, nel_solid)
+
+     call dump_field_1d_cp(V(:,:,:,1),'/velocityfiel_us', appisnap, nel_solid)
+     call dump_field_1d_cp(V(:,:,:,2),'/velocityfiel_up', appisnap, nel_solid)
+     call dump_field_1d_cp(V(:,:,:,3),'/velocityfiel_uz', appisnap, nel_solid)
+                                     
+     call dump_field_1d_cp(stress(:,:,:,1),'/stress_Sg11_sol', appisnap, nel_solid)
+     call dump_field_1d_cp(stress(:,:,:,2),'/stress_Sg22_sol', appisnap, nel_solid)
+     call dump_field_1d_cp(stress(:,:,:,3),'/stress_Sg33_sol', appisnap, nel_solid)
+     call dump_field_1d_cp(stress(:,:,:,4),'/stress_Sg12_sol', appisnap, nel_solid)
+     call dump_field_1d_cp(stress(:,:,:,5),'/stress_Sg13_sol', appisnap, nel_solid)
+     call dump_field_1d_cp(stress(:,:,:,6),'/stress_Sg23_sol', appisnap, nel_solid)
+     
+  end select
+end subroutine compute_stress_cp
 !!$!=============================================================================
 !!$!################################################################################
 !################################################################################
