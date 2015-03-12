@@ -178,5 +178,5 @@ time_evol_wave.o: apply_masks.o attenuation.o clocks.o commun.o data_io.o \
 ftz.o:  Makefile ../make_axisem.macros 
 pthread.o:  Makefile ../make_axisem.macros 
 kdtree2.o:  Makefile ../make_axisem.macros
-coupling_mod.o: global_parameters.o utlity.o Makefile ../make_axisem.macros
+coupling_mod.o: global_parameters.o utlity.o commun.o Makefile ../make_axisem.macros
 
