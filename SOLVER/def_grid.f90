@@ -217,10 +217,12 @@ subroutine deallocate_preloop_arrays
   deallocate(lnods)
   deallocate(crd_nodes)
   deallocate(eltype, coarsing, north, axis)
-  
-  if (allocated(ielsolid)) deallocate(ielsolid)
-  if (allocated(ielfluid)) deallocate(ielfluid)
-  if (allocated(spher_radii)) deallocate(spher_radii)
+
+  if (dump_type /= 'coupling' .and. dump_type /= 'coupling_box') then  
+     if (allocated(ielsolid)) deallocate(ielsolid)
+     if (allocated(ielfluid)) deallocate(ielfluid)
+     if (allocated(spher_radii)) deallocate(spher_radii)
+  end if
 
   ! Deallocate redundant arrays if memory-efficient dumping strategy is applied
   if (.not. need_fluid_displ) then
@@ -236,7 +238,9 @@ subroutine deallocate_preloop_arrays
 
   ! These terms are needed to compute the gradient!
   if (.not. dump_wavefields .or. &
-        (dump_type /= 'fullfields' .and. dump_type /= 'strain_only')) then
+        (dump_type /= 'fullfields' .and. dump_type /= 'strain_only'  &
+         .and. dump_type /= 'coupling' .and. dump_type /= 'coupling_box')) then  !!! SB coupling
+
      if (.not. anel_true .and. .not. dump_snaps_glob) then
         if (lpr) write(6,*)'  deallocating pointwise solid arrays...'
         deallocate(DsDeta_over_J_sol)
