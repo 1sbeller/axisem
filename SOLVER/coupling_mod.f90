@@ -64,7 +64,7 @@ contains
           thbox(3) = thmin
           rbox(4)  = rmax
           thbox(4) = thmax
-          phbox(4) = 0.
+          phbox(:) = 0.
           
 
           ! Must rotate these coordinates when source is not a the pole

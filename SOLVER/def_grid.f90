@@ -214,11 +214,11 @@ subroutine deallocate_preloop_arrays
 
   if (lpr) write(6,*)'  deallocating large mesh arrays...'
   ! TESTING: comment next 4 lines to use with plane wave initial condition
-  deallocate(lnods)
-  deallocate(crd_nodes)
-  deallocate(eltype, coarsing, north, axis)
+  if (dump_type /= 'coupling' .and. dump_type /= 'coupling_box') then  !! SB coupling
+     deallocate(lnods)
+     deallocate(crd_nodes)
+     deallocate(eltype, coarsing, north, axis)
 
-  if (dump_type /= 'coupling' .and. dump_type /= 'coupling_box') then  
      if (allocated(ielsolid)) deallocate(ielsolid)
      if (allocated(ielfluid)) deallocate(ielfluid)
      if (allocated(spher_radii)) deallocate(spher_radii)
