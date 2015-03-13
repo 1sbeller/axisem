@@ -1157,6 +1157,8 @@ subroutine dump_wavefields_mesh_1d
      allocate(sflu(ibeg:iend,jbeg:jend,nel_fluid))
      allocate(zflu(ibeg:iend,jbeg:jend,nel_fluid))
 
+!     have_fluid = .false. !!!! SB for debug...
+
   endif
   !!! END SB
 
