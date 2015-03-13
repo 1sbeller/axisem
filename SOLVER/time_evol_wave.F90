@@ -1197,7 +1197,7 @@ subroutine dump_stuff(iter, iseismo, istrain, isnap,     &
            !write(*,*) 'DUMP COUPLING FILES' 
            call compute_stress_cp(disp,velo,chi,istrain) !! VM VM
            !!     call dump_velo_global_cp(velo,dchi)  !!  _cp means coupling
-        case ('coupling_boxpoints')
+        case ('coupling_box')
            call compute_stress_cp(disp,velo,chi,istrain) !! VM VM
 
 !!!!! END SB

@@ -1281,7 +1281,7 @@ subroutine dump_wavefields_mesh_1d
         write(6,*)'  ....no need to dump anything else.'
      endif
 
-  case ('coupling_boxpoints')
+  case ('coupling_box')
      if (lpr) then
         write(6,*)'  strain dump: Global strain tensor and velocity fields'
         write(6,*)'  ....no need to dump anything else.'

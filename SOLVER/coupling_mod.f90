@@ -360,6 +360,8 @@ contains
     !end if
 
     ! Paraview output
+
+    !!!! AJOUTER LE TEST SB
     write(vtk_file_name,'(a10,i5.5,a4)')'Found_Elem',mynum,'.vtk'
     call  writeWTKCell(vtk_file_name ,lnodes_vtk,crd_nodes,data_for_vtk,npoin,nelem,3)
 
