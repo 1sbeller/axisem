@@ -49,10 +49,10 @@ contains
        if (dump_type == 'coupling') then
 
           ! Find elements base on min/max of colat and radius given by the user
-          rmin  = kwf_rmin * 1000.          ! to meters
-          rmax  = kwf_rmax * 1000.
-          thmin = kwf_thetamin * pi / 180.  ! to rad
-          thmax = kwf_thetamax * pi / 180.
+          rmin  = kwf_rmin !* 1000       ! to meters
+          rmax  = kwf_rmax !* 1000 
+          thmin = kwf_thetamin !* pi / 180.  ! to rad
+          thmax = kwf_thetamax !* pi / 180.
 
           allocate(rbox(4), thbox(4), phbox(4))
 
@@ -288,13 +288,12 @@ contains
        ! Find max and min of element corner coordinates
        r = max(max(r1,r2), max(r3, r4))
        th = max(max(th1,th2), max(th3, th4))
-    
+   
        ! If the element is in the "restricted area" (defined by box's edges) 
        if (r >= rmin .and. th >= thmin) then
           r = min(min(r1,r2), min(r3, r4))
           th = min(min(th1,th2), min(th3, th4))        
           if (r <= rmax .and. th <= thmax) then
-     
              !to plot all gll points in elements effected:
 !             rhetmax = max(max(max(r1,r2), max(r3, r4)), rhetmax)
 !             thhetmax = max(max(max(th1,th2), max(th3, th4)), thhetmax)
