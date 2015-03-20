@@ -1,5 +1,7 @@
 #!/bin/csh -f
 
+source /softs/env_default.csh
+
 if ( $1 == '-h' ) then 
   echo "Argument options:"
   echo "   default (no argument): submit xmesh on current machine"
@@ -105,8 +107,10 @@ else if ( $1 == 'SuperMUC') then
 
 else
     ######## SUBMIT LOCALLY #######
-    #setenv OMP_NUM_THREADS 4
-    nohup ./xmesh > OUTPUT &
+    unlimit stacksize     
+#    setenv OMP_NUM_THREADS 20
+#    nohup ./xmesh > OUTPUT &
+    oarsub -S ./mysubmit.sh 
     # uncomment the following three lines to monitor memory usage of the mesher
     #cd UTILS
     #python monitor_memory.py > ../memory_output &

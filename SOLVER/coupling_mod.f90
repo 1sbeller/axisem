@@ -302,28 +302,35 @@ contains
 !             thhetmin = min(min(min(th1,th2), min(th3, th4)), thhetmin)
 
              ! Loop over box's points
-             do ibox = 1, npt_box_file
+
+             select case (dump_type)    !! SB
+             case ('coupling_box')
+                     do ibox = 1, npt_box_file
                 
 
-                !!!!!!! LATER NEED TO CHECK THE SHAPE OF THE ELEMENT (eltype)
-                !!!!!!! MUST COMPUTE THE JACOBIAN OF THE ELEMENT (eta,xi_k,...)
-                !!!!!!!       => will be tricky, must take attention (solid/fluid,renumbering)
-                !!!!!!! Look at compute_coordinates_mesh (get_mesh.f90), crd_nodes and lnodes (data_mesh.f90) inode=1,8 => informations on how to use in compute_coordinates
-                !!!!!! c
-                if (       szbox(1,ibox) >= smin-eps .and. szbox(1,ibox) <= smax+eps &
-                     .and. szbox(2,ibox) >= zmin-eps .and. szbox(2,ibox) <= zmax+eps     ) then !
+                        !!!!!!! LATER NEED TO CHECK THE SHAPE OF THE ELEMENT (eltype)
+                        !!!!!!! MUST COMPUTE THE JACOBIAN OF THE ELEMENT (eta,xi_k,...)
+                        !!!!!!!       => will be tricky, must take attention (solid/fluid,renumbering)
+                        !!!!!!! Look at compute_coordinates_mesh (get_mesh.f90), crd_nodes and lnodes (data_mesh.f90) inode=1,8 => informations on how to use in compute_coordinates
+                        !!!!!! c
+                        if (       szbox(1,ibox) >= smin-eps .and. szbox(1,ibox) <= smax+eps &
+                             .and. szbox(2,ibox) >= zmin-eps .and. szbox(2,ibox) <= zmax+eps     ) then !
 
-                   is_in_box(iel)=is_in_box(iel)+1
-                   !! FOR NOW ASSUME THAT WE ARE IN SOLID REGION ONLY
-                   data_for_vtk(iel)=1.
+                           is_in_box(iel)=is_in_box(iel)+1
+                           !! FOR NOW ASSUME THAT WE ARE IN SOLID REGION ONLY
+                           data_for_vtk(iel)=1.
 
-                   !write(6,*)'Found element : ',iel,' of coordinates : ',smin,smax,zmin,zmax,' for box point : ',szbox(1,ibox),szbox(2,ibox)
-                   exit 
+                           !write(6,*)'Found element : ',iel,' of coordinates : ',smin,smax,zmin,zmax,' for box point : ',szbox(1,ibox),szbox(2,ibox)
+                           exit 
                    
-                end if
-                
-             end do
-
+                        end if
+                        
+                     end do
+             case ('coupling')
+                        is_in_box(iel)=is_in_box(iel)+1
+                        !! FOR NOW ASSUME THAT WE ARE IN SOLID REGION ONLY
+                         data_for_vtk(iel)=1.
+             end select case   !! Add cade to disticnt box and aeea (SB)
           endif
        endif
     enddo

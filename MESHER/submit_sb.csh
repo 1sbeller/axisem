@@ -110,7 +110,7 @@ else
     unlimit stacksize     
 #    setenv OMP_NUM_THREADS 20
 #    nohup ./xmesh > OUTPUT &
-    oarsub -S ./mysubmit.sh 
+    oarsub -S ./mysubmit_licallo.sh 
     # uncomment the following three lines to monitor memory usage of the mesher
     #cd UTILS
     #python monitor_memory.py > ../memory_output &

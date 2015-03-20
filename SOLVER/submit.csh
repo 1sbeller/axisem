@@ -1,5 +1,7 @@
 #!/bin/csh -f
 
+source /softs/env_default.csh
+
 set pwd_noblank = `echo $PWD | sed 's/ //g'`
 test "$pwd_noblank" != "$PWD" && echo "ERROR: your path contains a blank, please rename" && exit
 set homedir = $PWD
@@ -417,11 +419,12 @@ foreach isim (${srcapp})
     else 
         #ulimit -s unlimited
         #setenv OMP_NUM_THREADS 4
-
+        unlimit stacksize
         if ( $serial == 'true' ) then
-            ./axisem >& $outputname &
+           ./axisem >& $outputname &
         else if ( $serial == 'false' ) then
-            $mpiruncmd -n $nodnum ./axisem >& $outputname &
+            #$mpiruncmd -n $nodnum ./axisem >& $outputname &
+            oarsub -S ./mysubmit.sh
         else
             echo 'ERROR: value for SERIAL in make_axisem.macros should be either "true" or "false"'
             echo "SERIAL = $serial"
