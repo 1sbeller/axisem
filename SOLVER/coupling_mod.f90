@@ -330,7 +330,7 @@ contains
                         is_in_box(iel)=is_in_box(iel)+1
                         !! FOR NOW ASSUME THAT WE ARE IN SOLID REGION ONLY
                          data_for_vtk(iel)=1.
-             end select case   !! Add cade to disticnt box and aeea (SB)
+             end select   !! Add cade to disticnt box and aeea (SB)
           endif
        endif
     enddo
