@@ -75,6 +75,9 @@ subroutine define_discont
      case('iasp91')
         write(6,*)'Reading IASP91 discontinuities...'
         call iasp91_discont
+     case('prem_iso_custom')
+        write(6,*)'Reading PREM discontinuities...'
+        call prem_discont
      case('external')
         write(6,*)'Reading step-wise model from file: ', trim(fnam_ext_model)
         call arbitrmodel_discont

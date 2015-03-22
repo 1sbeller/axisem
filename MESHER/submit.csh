@@ -1,6 +1,5 @@
 #!/bin/csh -f
 
-source /softs/env_default.csh
 
 if ( $1 == '-h' ) then 
   echo "Argument options:"
@@ -109,8 +108,8 @@ else
     ######## SUBMIT LOCALLY #######
     unlimit stacksize     
 #    setenv OMP_NUM_THREADS 20
-#    nohup ./xmesh > OUTPUT &
-    oarsub -S ./mysubmit.sh 
+    nohup ./xmesh > OUTPUT &
+#    oarsub -S ./mysubmit.sh 
     # uncomment the following three lines to monitor memory usage of the mesher
     #cd UTILS
     #python monitor_memory.py > ../memory_output &

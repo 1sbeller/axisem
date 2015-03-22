@@ -97,6 +97,8 @@ real(kind=dp)  function velocity(r0, param, idom, bkgrdmodel2, lfbkgrdmodel2)
         velocity = prem_solid_light_sub(r0, param, idom)
      case('iasp91')
         velocity = iasp91_sub(r0, param, idom)
+     case('prem_iso_custom')
+        velocity=prem_sub_sb(r0, param, idom)   ! SB!
      case('external')
         velocity = arbitr_sub_solar(r0, param, idom)
      case default
@@ -151,6 +153,8 @@ logical function model_is_anelastic(bkgrdmodel2)
   case('prem_iso_light')
     model_is_anelastic = .true.
   case('iasp91')
+    model_is_anelastic = .true.
+  case('prem_iso_custom')
     model_is_anelastic = .true.
   case('external')
     model_is_anelastic = ext_model_is_anelastic 
@@ -2029,6 +2033,133 @@ subroutine get_ext_disc(fnam_ext_model, ndisc_out, discont, vp, vs, rho)
 
 end subroutine
 !-----------------------------------------------------------------------------------------
+
+
+!================================================================================
+! Two layers plus core model -- SB
+real(kind=dp) function prem_sub_sb(r0, param, idom)
+
+  real(kind=dp)   , intent(in) :: r0
+  integer, intent(in)          :: idom
+  real(kind=dp)                :: r,x_prem
+  real(kind=dp)                :: ro_prem,vp_prem,vs_prem
+  real(kind=dp)                :: Qmu, Qkappa
+  character(len=3), intent(in) :: param !rho, vs,vp
+
+  r = r0 / 1000.
+
+  x_prem = r / 6371.     ! Radius (normalized to x(surface)=1 )
+
+  if(idom==1)then        ! upper crustal layer
+     ro_prem = 2.6
+     vp_prem = 5.8
+     vs_prem = 3.2
+     Qmu = 600.0
+     Qkappa = 57827.0
+  elseif(idom==2)then
+     ro_prem = 2.9                       ! lower crustal layer
+     vp_prem = 6.8
+     vs_prem = 3.9
+     Qmu = 600.0
+     Qkappa = 57827.0
+  elseif(idom==3)then
+     ro_prem = 3.38   ! 2.691  + 0.6924 * x_prem             ! upper mantle
+     vp_prem = 8.1106 ! 4.1875 + 3.9382 * x_prem
+     vs_prem = 4.4910 ! 2.1519 + 2.3481 * x_prem
+     Qmu = 600.0
+     Qkappa = 57827.0
+  elseif(idom==4)then
+     ro_prem=  3.435   !7.1089 -  3.8045 * x_prem
+     vp_prem=  8.55895 !20.3926 - 12.2569 * x_prem
+     vs_prem=  4.64390 !8.9496 -  4.4597 * x_prem
+     Qmu = 143.0
+     Qkappa = 57827.0
+  elseif(idom==5)then
+     ro_prem = 3.85      !11.2494 -  8.0298 * x_prem
+     vp_prem = 9.133917  !39.7027 - 32.6166 * x_prem
+     vs_prem = 5.515931  !22.3512 - 18.5856 * x_prem
+     Qmu = 143.0
+     Qkappa = 57827.0
+  elseif(idom==6)then
+     ro_prem = 3.975    ! 5.3197 - 1.4836 * x_prem
+     vp_prem = 10.15776 ! 19.0957 - 9.8672 * x_prem
+     vs_prem = 5.516017 ! 9.9839 - 4.9324 * x_prem
+     Qmu = 143.0
+     Qkappa = 57827.0
+  elseif(idom==7)then   !lower mantle
+     ro_prem = 4.45    ! 7.9565 -  6.4761 * x_prem + 5.5283 * x_prem**2 - 3.0807 * x_prem**3
+     vp_prem = 11.0656 ! 29.2766 - 23.6027 * x_prem + 5.5242 * x_prem**2 - 2.5514 * x_prem**3
+     vs_prem =  6.2404 ! 22.3459 - 17.2473 * x_prem - 2.0834 * x_prem**2 + 0.9783 * x_prem**3
+     Qmu = 312.0
+     Qkappa = 57827.0
+  elseif(idom==8)then
+     ro_prem =  4.45    !7.9565 -  6.4761 * x_prem +  5.5283 * x_prem**2 -  3.0807 * x_prem**3
+     vp_prem = 11.0656 !24.9520 - 40.4673 * x_prem + 51.4832 * x_prem**2 - 26.6419 * x_prem**3
+     vs_prem =  6.2404 !11.1671 - 13.7818 * x_prem + 17.4575 * x_prem**2 -  9.2777 * x_prem**3
+     Qmu = 312.0
+     Qkappa = 57827.0
+  elseif(idom==9)then
+     ro_prem =   4.45  !7.9565 - 6.4761 * x_prem + 5.5283 * x_prem**2 - 3.0807 * x_prem**3
+     vp_prem =  11.0656 !15.3891 - 5.3181 * x_prem + 5.5242 * x_prem**2 - 2.5514 * x_prem**3
+     vs_prem =   6.2404 !6.9254 + 1.4672 * x_prem - 2.0834 * x_prem**2 + 0.9783 * x_prem**3
+     Qmu = 312.0
+     Qkappa = 57827.0
+  elseif(idom==10)then  ! outer core
+     ro_prem = 12.5815 - 1.2638 * x_prem - 3.6426 * x_prem**2 -  5.5281  * x_prem**3
+     vp_prem = 11.0487 - 4.0362 * x_prem + 4.8023 * x_prem**2 - 13.5732  * x_prem**3
+     vs_prem = 0.0
+     Qmu = 0.0
+     Qkappa = 57827.0
+  elseif(idom==11)then                        ! inner core
+     ro_prem = 13.0885 - 8.8381 * x_prem**2
+     vp_prem = 11.2622 - 6.3640 * x_prem**2
+     vs_prem =  3.6678 - 4.4475 * x_prem**2
+     Qmu = 84.6
+     Qkappa = 1327.7
+  endif
+
+ ! homog model 
+  if (idom < 10) then
+     ro_prem = 3.3
+     vp_prem = 8.5
+     vs_prem = 4.9
+  end if
+  if (idom == 1) then
+     ro_prem = 2.7
+     vp_prem = 6.5
+     vs_prem = 3.8
+  end if
+
+  if (param=='rho') then
+     prem_sub_sb = ro_prem * 1000.
+  elseif (param=='v_p') then
+     prem_sub_sb = vp_prem * 1000.
+  elseif (param=='v_s') then
+     prem_sub_sb = vs_prem * 1000.
+  elseif (param=='vpv') then
+     prem_sub_sb = vp_prem * 1000.
+  elseif (param=='vsv') then
+     prem_sub_sb = vs_prem * 1000.
+  elseif (param=='vph') then
+     prem_sub_sb = vp_prem * 1000.
+  elseif (param=='vsh') then
+     prem_sub_sb = vs_prem * 1000.
+  elseif (param=='eta') then
+     prem_sub_sb = 1.
+  elseif (param=='Qmu') then
+     prem_sub_sb = Qmu
+  elseif (param=='Qka') then
+     prem_sub_sb = Qkappa
+  else
+     write(6,*)'ERROR IN PREM_SUB FUNCTION:',param,'NOT AN OPTION'
+     stop
+  endif
+
+end function prem_sub_sb
+!-------------------------------------------------------------------
+
+
+
 
 end module background_models
 !=========================================================================================
