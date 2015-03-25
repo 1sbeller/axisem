@@ -2125,9 +2125,9 @@ real(kind=dp) function prem_sub_sb(r0, param, idom)
      vs_prem = 4.9
   end if
   if (idom == 1) then
-     ro_prem = 2.7
-     vp_prem = 6.5
-     vs_prem = 3.8
+     ro_prem = 3.3 !2.7
+     vp_prem = 8.5 !6.5
+     vs_prem = 4.9 !3.8
   end if
 
   if (param=='rho') then
