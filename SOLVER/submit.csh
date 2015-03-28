@@ -268,6 +268,8 @@ cp $homedir/mesh_params.h .
 cp $homedir/inparam_basic .
 cp $homedir/inparam_advanced .
 cp $homedir/inparam_hetero .
+cp $homedir/input_box.txt .
+cp $homedir/input_box.txt ../.
 
 
 if ( $simtype == 'moment' ) then
