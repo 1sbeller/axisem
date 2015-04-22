@@ -1,6 +1,14 @@
 #!/bin/csh -f
 
-source /softs/env_default.csh
+#occigen
+#. /opt/modules/3.2.10/Modules/init/bash
+source /opt/modules/default/Modules/init/csh
+module purge
+module load intel/15.0.0.090
+module load bullxmpi/1.2.8.3
+
+#licallo
+#source /softs/env_default.csh
 
 if ( $1 == '-h' ) then 
   echo "Argument options:"
@@ -110,7 +118,7 @@ else
     unlimit stacksize     
 #    setenv OMP_NUM_THREADS 20
 #    nohup ./xmesh > OUTPUT &
-    oarsub -S ./mysubmit_licallo.sh 
+    sbatch mysubmit_occigen.sh 
     # uncomment the following three lines to monitor memory usage of the mesher
     #cd UTILS
     #python monitor_memory.py > ../memory_output &

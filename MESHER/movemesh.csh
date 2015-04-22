@@ -46,7 +46,7 @@ echo "Moving mesh to" $meshpath
 
 mv $xmeshrundir/meshdb.dat* $meshpath
 mv $xmeshrundir/mesh_params.h $meshpath
-mv $xmeshrundir/OUTPUT $meshpath
+mv $xmeshrundir/OUTPUT_MESHER $meshpath
 #mv Diags $meshpath
 cp -p $xmeshrundir/inparam_mesh $meshpath
 
