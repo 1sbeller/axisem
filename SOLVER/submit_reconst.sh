@@ -6,11 +6,11 @@
 #SBATCH --ntasks=480
 #SBATCH --ntasks-per-node=24
 #SBATCH --cpus-per-task=1 
-#SBATCH --time=00:30:00
-#SBATCH --output INTERP
+#SBATCH --time=01:59:00
+#SBATCH --output RECON
 module purge
 module load intel/15.0.0.090
 module load bullxmpi/1.2.8.3
 ulimit -s unlimited
-time srun --mpi=pmi2 -K1 --resv-ports -n $SLURM_NTASKS ./interpolate_3D_wavefield.x > OUTPUT_interp
+time srun --mpi=pmi2 -K1 --resv-ports -n $SLURM_NTASKS ./reconstruct_3D_wavefield.x > OUTPUT_recon
 

@@ -235,6 +235,7 @@ foreach isim  (${srcapp})
         #ln -s $datapath_isim ./Data
 	mkdir Data
         cp -Lpr $datapath_isim Data
+        #ln -sf  $datapath_isim ./Data
     endif
         
     if ( -d $infopath) then 
@@ -267,9 +268,27 @@ foreach isim  (${srcapp})
     cp $homedir/inparam_hetero .
 
     # SB for coupling
-    cp $homedir/mysubmit_occigen.sh .
+    cp $homedir/mysubmit_occigen2.sh .
     echo "$mainrundir/$isim"
-    sed -i "s|mondossier|$1/$isim|"  mysubmit_occigen.sh
+    sed -i "s|mondossier|$1/$isim|"  mysubmit_occigen2.sh
+
+
+    set mycomp = `echo $isim | awk '{print substr($0,1,3)}'`
+    set mysour = `echo $1 | awk '{print substr($0,8)}'`
+
+    sed -i "s|monnom|$mysour/$mycomp|"  mysubmit_occigen2.sh
+
+    if ( $isim == 'MZZ' ) then
+	set walltime = '01:59:00'
+    else if ( $isim == 'MXX_P_MYY' ) then
+	set walltime = '01:59:00'
+    else
+	set walltime = '01:59:00'
+    endif
+
+    sed -i "s|monwalltime|$walltime|"  mysubmit_occigen2.sh
+    
+
     cp $homedir/interpolation.par .
     cp $homedir/reconstruction.par .
     cp $homedir/input_box.txt .
@@ -281,13 +300,15 @@ foreach isim  (${srcapp})
     if ( $multisrc == 'false' ) then
         #ln -s ../$meshdir/ Mesh
 	mkdir Mesh
-        echo $meshdir
+        #echo $meshdir
         cp -r ../$meshdir/* Mesh/.
+        #ln -sf ../$meshdir/ Mesh
     else 
         #ln -s ../../$meshdir/ Mesh
 	mkdir Mesh/
-	echo $meshdir
+	#echo $meshdir
 	cp -r ../../$meshdir/* Mesh/.
+        #ln -sf ../../$meshdir/ Mesh
     endif
     
     if ( $bgmodel == 'external' ) then
@@ -325,6 +346,12 @@ endif
 
 set nodnum = `grep nproc_mesh $homedir/mesh_params.h |awk '{print $6}'`
 echo "preparing job on $nodnum nodes..."
+
+set lala = `squeue -u beller | grep beller | awk '{printf("%d:",$1)}'`
+set job2wait = `echo $lala | sed 's/.\{1\}$//'`
+
+
+echo "Wait for $job2wait"
 
 foreach isim (${srcapp})
     cd $isim
@@ -455,7 +482,10 @@ foreach isim (${srcapp})
            ./axisem >& $outputname &
         else if ( $serial == 'false' ) then
             #$mpiruncmd -n $nodnum ./axisem >& $outputname &
-		sbatch mysubmit_occigen.sh
+
+
+#		sbatch  --dependency=afterany:$job2wait mysubmit_occigen2.sh
+		sbatch  mysubmit_occigen2.sh
 #            oarsub -S ./mysubmit_licallo.sh
 
         else

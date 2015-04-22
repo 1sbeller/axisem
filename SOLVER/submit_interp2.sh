@@ -1,6 +1,6 @@
 #!/bin/bash
-#SBATCH -J monnom
-#SBATCH -D /scratch/cnt0023/git6091/beller/EGU_2015/Real_Data/AxiSEM_simulations/axisem-master/SOLVER/mondossier
+#SBATCH -J 45/INTERP
+#SBATCH -D /scratch/cnt0023/git6091/beller/EGU_2015/Real_Data/AxiSEM_simulations/axisem-master/SOLVER/Source_45
 #SBATCH --get-user-env
 #SBATCH --nodes=20
 #SBATCH --ntasks=480
