@@ -1893,7 +1893,7 @@ subroutine compute_stress_cp(u, v, chi, istrain)
 
       call axisym_gradient_solid(u(:,:,:,1) - u(:,:,:,2), grad_sol) !1:dsup,2:dzup
       strain(:,:,:,4) =  f_over_s_solid(u(:,:,:,2)) + grad_sol(:,:,:,1) / two_rk !! VM VM
-      strain(:,:,:,6) = (f_over_s_solid(u(:,:,:,3)) -  grad_sol(:,:,:,2)) / two_rk
+      strain(:,:,:,6) = (f_over_s_solid(u(:,:,:,3)) +  grad_sol(:,:,:,2)) / two_rk
       ! compute stress
       do iel=1,nel_solid
          iel0=ielsolid(iel)
