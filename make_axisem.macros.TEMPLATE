@@ -32,7 +32,7 @@ INCLUDE_MPI = false
 # Meshes, i.e. <5s period. Uses up to 8 threads. Does not affect the SOLVER.
 CC      = gcc
 FC      = mpif90
-FFLAGS  = -O3 #-march=native -fopenmp        
+FFLAGS  = -O3 -xHost #-march=native -fopenmp        
 CFLAGS  = -O3 #-march=native                
 LDFLAGS = -O3 #-march=native -fopenmp      
 
