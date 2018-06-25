@@ -115,7 +115,7 @@ contains
 
     integer :: j
     character(len=100) :: boxpoints_file
-    real, parameter :: delta_r=10000., delta_th=0.05
+    real(kind=dp), parameter :: delta_r=10000., delta_th=0.05
 
 
     boxpoints_file = '../input_box.txt'
@@ -133,9 +133,9 @@ contains
 
     close(unit=91)
 
-    rbox  = rbox * 1000.
-    thbox = (90. - thbox) * pi / 180.      ! Read latitudes instead of colatitudes
-    phbox = phbox * pi / 180.              
+    rbox  = rbox * 1000._dp
+    thbox = (90._dp - thbox) * pi / 180._dp      ! Read latitudes instead of colatitudes
+    phbox = phbox * pi / 180._dp              
 
     !--------------------------------------------------
     ! Sort (r,theta,phi) coordinates
@@ -143,18 +143,18 @@ contains
 
     !-------------------------------------------------------
     ! Rotate the whole set of coordinate with the source term
-    rmin  = minval(rbox)
-    rmax  = maxval(rbox) !+ delta_r
-    thmin = minval(thbox)
-    thmax = maxval(thbox) !+ delta_th
+    rmin  = minval(rbox) - delta_r
+    rmax  = maxval(rbox) + delta_r
+    thmin = minval(thbox) - delta_th
+    thmax = maxval(thbox) + delta_th
 
     ! Check min/max values of r and theta before rotation
-    write(6,*) mynum, 'r min/max:', rmin / 1000., rmax / 1000.
-    write(6,*) mynum, 'th min/max:', thmin / pi * 180., thmax / pi * 180.
+    !!!write(6,*) mynum, 'r min/max:', rmin / 1000., rmax / 1000.
+    !!!write(6,*) mynum, 'th min/max:', thmin / pi * 180., thmax / pi * 180.
 
     !write(*,*) 'ROTATION ? ', rot_src
     if (rot_src) then
-       write(6,*) mynum, 'rotate since source is not beneath north pole'
+       !!!!!write(6,*) mynum, 'rotate since source is not beneath north pole'
        
        do j=1, npt_box_file
        !   if (j==1) then
@@ -172,9 +172,9 @@ contains
        thmax = maxval(thbox)
        
        ! Check min/max values again if rotation has been applied
-       write(6,*) mynum, 'r min/max after rotation:', rmin / 1000., rmax / 1000.
-       write(6,*) mynum, 'th min/max after rotation:', thmin / pi * 180., &
-            thmax / pi * 180.
+       !!!!write(6,*) mynum, 'r min/max after rotation:', rmin / 1000., rmax / 1000.
+       !!!!write(6,*) mynum, 'th min/max after rotation:', thmin / pi * 180., &
+       !!!!     thmax / pi * 180.
     end if
 
     !!!!!!!!!!! MAYBE SHOULD WE PASTE vtk plot discrete inputs ALSO (SB) ...
@@ -205,7 +205,7 @@ contains
     integer :: iel, ibox, iel_solid
     real(kind=dp) :: s, z, r1, r2, r3, r4, th1, th2, th3, th4, r, th, thetamin, thetamax
     real(kind=dp) :: smin,smax,zmin,zmax
-    real(kind=dp),parameter  :: eps=1e-5
+    real(kind=dp),parameter  :: eps=0._dp !  1e-5
     
     !! FOR VTK
     real, allocatable :: data_for_vtk(:)

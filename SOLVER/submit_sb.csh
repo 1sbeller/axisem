@@ -1,10 +1,10 @@
-#!/bin/csh -f
+#!/bin/csh 
 
 #occigen
-source /opt/modules/default/Modules/init/csh
+#source /opt/modules/default/Modules/init/csh
 module purge
-module load intel/15.0.0.090
-module load bullxmpi/1.2.8.3
+module load intel
+module load intelmpi
 
 # licallo
 #source /softs/env_default.csh
@@ -232,9 +232,9 @@ foreach isim  (${srcapp})
             set datapath_isim = $datapath
         endif
         mkdir -p $datapath_isim
-        #ln -s $datapath_isim ./Data
-	mkdir Data
-        cp -Lpr $datapath_isim Data
+        ln -s $datapath_isim ./Data
+	#mkdir Data
+        #cp -Lpr $datapath_isim Data
     endif
         
     if ( -d $infopath) then 
@@ -279,15 +279,15 @@ foreach isim  (${srcapp})
 
 
     if ( $multisrc == 'false' ) then
-        #ln -s ../$meshdir/ Mesh
-	mkdir Mesh
-        echo $meshdir
-        cp -r ../$meshdir/* Mesh/.
+        ln -s ../$meshdir/ Mesh
+	#mkdir Mesh
+        #echo $meshdir
+        #cp -r ../$meshdir/* Mesh/.
     else 
-        #ln -s ../../$meshdir/ Mesh
-	mkdir Mesh/
-	echo $meshdir
-	cp -r ../../$meshdir/* Mesh/.
+        ln -s ../../$meshdir/ Mesh
+	#mkdir Mesh/
+	#echo $meshdir
+	#cp -r ../../$meshdir/* Mesh/.
     endif
     
     if ( $bgmodel == 'external' ) then

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -J monnom
+#SBATCH -J 10/INTERP
 #SBATCH --get-user-env
 #SBATCH --nodes=5
 #SBATCH --ntasks=120
