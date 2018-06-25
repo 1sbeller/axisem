@@ -1,11 +1,11 @@
-#!/bin/csh -f
+#!/bin/csh 
 
 #occigen
 #. /opt/modules/3.2.10/Modules/init/bash
-source /opt/modules/default/Modules/init/csh
+#source /opt/modules/default/Modules/init/csh
 module purge
-module load intel/15.0.0.090
-module load bullxmpi/1.2.8.3
+module load intel
+module load intelmpi
 
 #licallo
 #source /softs/env_default.csh

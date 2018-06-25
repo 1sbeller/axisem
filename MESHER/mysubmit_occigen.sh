@@ -1,17 +1,17 @@
 #!/bin/bash
-#SBATCH -J MesherAxisem
-#SBATCH -D /scratch/cnt0023/git6091/beller/EGU_2015/Real_Data/AxiSEM_simulations/axisem-master/MESHER
-#SBATCH --get-user-env
+#SBATCH -J MeshAxi
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=24 
-#SBATCH --time=00:30:00
-#SBATCH --output AxiMesh
+#SBATCH --cpus-per-task=1
+#SBATCH --constraint=HSW24 
+#SBATCH --output OUTPUT_AXISEM_MESH
+#SBATCH --time=00:10:00
+#SBATCH --mem=10000  
 module purge
-module load intel/15.0.0.090
-module load bullxmpi/1.2.8.3
-export OMP_NUM_THREADS=24
+module load intel
+module load intelmpi
+
 ulimit -s unlimited
-time srun --mpi=pmi2 -K1 --resv-ports -n $SLURM_NTASKS ./xmesh > OUTPUT
+time srun --mpi=pmi2 -K1 -n $SLURM_NTASKS ./xmesh > OUTPUT 
 
